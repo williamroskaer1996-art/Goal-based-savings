@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --grounded-green: #004B32;
+  --grounded-lupine: #8074FF;
+  --birch-skin: #F3EDE4;
+  --charcoal: #222222;
+  --sienna-spark: #FF6400;
+}
+
+html,
+body {
+  background-color: var(--birch-skin);
+  color: var(--charcoal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* Subtle scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Number input — hide spinners */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Display font fallback to Syne via Google Fonts (loaded in layout) */
+.font-display {
+  font-family: 'RB Freigeist Neue', 'Syne', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Bubble physics & flip animations */
+@keyframes bubble-burst {
+  0%   { transform: scale(1);   opacity: 1; }
+  40%  { transform: scale(1.35); opacity: 1; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+.bubble-burst {
+  animation: bubble-burst 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes goal-complete-msg {
+  0%   { opacity: 0; transform: translateY(8px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.goal-complete-msg {
+  animation: goal-complete-msg 3s ease forwards;
+}
+
+.flip-card {
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.flip-card.flipped { transform: rotateY(180deg); }
+.flip-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-face-back { transform: rotateY(180deg); }
