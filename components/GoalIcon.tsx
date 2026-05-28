@@ -16,6 +16,7 @@ export const ICON_BG: Record<GoalIconKey, string> = {
   garden:    '#98D39A',
   tools:     '#F3EDE4',
   safety:    '#C2CBFA',
+  train:     '#8074FF',
   other:     '#F3EDE4',
 };
 
@@ -32,6 +33,7 @@ export const ICON_FG: Record<GoalIconKey, string> = {
   garden:    '#004B32',
   tools:     '#004B32',
   safety:    '#8074FF',
+  train:     '#FFFFFF',
   other:     '#004B32',
 };
 

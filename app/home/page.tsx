@@ -10,7 +10,7 @@ import { useAppStore } from '@/lib/store';
 
 export default function HomePage() {
   const router = useRouter();
-  const { isInitialized, isAuthenticated, accounts, goals } = useAppStore();
+  const { isInitialized, isAuthenticated, accounts, goals, logout } = useAppStore();
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -27,7 +27,7 @@ export default function HomePage() {
   const primaryAccounts = [...checkingAccounts, ...savingsAccounts];
 
   return (
-    <main className="flex min-h-screen flex-col px-5 pb-24 pt-6">
+    <main className="flex min-h-dvh flex-col px-5 pb-24 pt-6">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h1 className="font-display text-xl font-bold text-grounded-green whitespace-nowrap" style={{ fontWeight: 700 }}>
@@ -36,7 +36,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => router.push('/login')}
+            onClick={() => { logout(); router.push('/login'); }}
             aria-label="Lock / log out"
             className="flex h-8 w-8 items-center justify-center rounded-full text-charcoal/40 transition hover:bg-grounded-green/8 hover:text-grounded-green active:scale-95"
           >

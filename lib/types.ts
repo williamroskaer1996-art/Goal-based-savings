@@ -205,8 +205,7 @@ export type GoalAccount = {
   partnershipId?: string;
   completedAt?: string;
   monthlyDeposit?: number;
-  /** 'saving' (default) or 'investing' */
-  goalType?: 'saving' | 'investing';
+  goalType: 'saving' | 'investing';
 };
 
 export type Account = {
@@ -220,7 +219,9 @@ export type Account = {
 export type Transaction = {
   id: string;
   label: string;
+  sublabel?: string;
   amount: number;
   date: string;
   type: 'credit' | 'debit';
+  icon?: string;
 };

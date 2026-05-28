@@ -18,6 +18,8 @@ export default function SetGoalPage() {
   const searchParams = useSearchParams();
   const id = params.id as string;
   const editGoalId = searchParams.get('goalId'); // present when editing
+  const goalTypeParam = searchParams.get('goalType');
+  const goalType: 'saving' | 'investing' = goalTypeParam === 'investing' ? 'investing' : 'saving';
 
   const { isInitialized, isAuthenticated, accounts, goals, addGoal, updateGoal } = useAppStore();
 
@@ -102,6 +104,7 @@ export default function SetGoalPage() {
         purpose: purpose.trim() || undefined,
         transition: autoTransition,
         partnershipId: partnershipId ?? undefined,
+        goalType,
       });
     }
     router.push('/goals');
@@ -110,7 +113,7 @@ export default function SetGoalPage() {
   const isEditing = !!existingGoal;
 
   return (
-    <main className="flex min-h-screen flex-col">
+    <main className="flex min-h-dvh flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-6">
         <button

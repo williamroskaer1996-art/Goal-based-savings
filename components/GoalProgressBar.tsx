@@ -1,9 +1,9 @@
-import type { SavingsGoal } from '@/lib/types';
+import type { GoalAccount } from '@/lib/types';
 import { GOAL_ICONS } from '@/lib/types';
 
 type Props = {
   balance: number;
-  goal: SavingsGoal;
+  goal: Pick<GoalAccount, 'name' | 'targetAmount' | 'iconKey'>;
 };
 
 function formatEur(n: number) {

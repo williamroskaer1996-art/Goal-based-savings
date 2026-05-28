@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { AppStoreProvider } from '@/lib/store';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import './globals.css';
 
 const inter = Inter({
@@ -42,12 +43,14 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-birch-skin text-charcoal antialiased">
-        <AppStoreProvider>
-          {/* pt-[54px] clears the status bar / Dynamic Island in the mockup iframe */}
-          <div className="mx-auto min-h-screen w-full max-w-md bg-birch-skin pt-[54px]">
-            {children}
-          </div>
-        </AppStoreProvider>
+        <ErrorBoundary>
+          <AppStoreProvider>
+            {/* pt-[54px] clears the status bar / Dynamic Island in the mockup iframe */}
+            <div className="mx-auto min-h-dvh w-full max-w-md bg-birch-skin pt-[54px]">
+              {children}
+            </div>
+          </AppStoreProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

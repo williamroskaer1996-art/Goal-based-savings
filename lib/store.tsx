@@ -12,6 +12,9 @@ import {
 import type { Account, GoalAccount } from './types';
 import { INITIAL_ACCOUNTS, INITIAL_GOALS } from './mockData';
 
+// Bump this string whenever INITIAL_GOALS changes — forces a reset in all browsers.
+const DATA_VERSION = 'v5';
+
 type AppStoreValue = {
   isInitialized: boolean;
   isAuthenticated: boolean;
@@ -23,7 +26,7 @@ type AppStoreValue = {
   updateGoal: (goalId: string, patch: Partial<Omit<GoalAccount, 'id'>>) => void;
   depositToGoal: (goalId: string, amount: number) => void;
   completeGoal: (goalId: string) => void;
-  deposit: (accountId: string, amount: number) => void;
+  adjustBalance: (accountId: string, amount: number) => void;
 };
 
 const AppStoreContext = createContext<AppStoreValue | null>(null);
@@ -33,9 +36,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
   const [goals, setGoals] = useState<GoalAccount[]>([]);
-
-  // Bump this string whenever INITIAL_GOALS changes — forces a reset in all browsers.
-  const DATA_VERSION = 'v5';
 
   // Rehydrate from sessionStorage after mount (avoids SSR mismatch)
   useEffect(() => {
@@ -64,7 +64,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem('triodos_goals', JSON.stringify(INITIAL_GOALS));
         sessionStorage.setItem('triodos_data_version', DATA_VERSION);
       }
-    } catch {}
+    } catch (e) {
+      console.error('Failed to rehydrate store:', e);
+    }
     setIsInitialized(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -120,7 +122,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const deposit = useCallback((accountId: string, amount: number) => {
+  const adjustBalance = useCallback((accountId: string, amount: number) => {
     setAccounts((prev) => {
       const next = prev.map((a) =>
         a.id === accountId ? { ...a, balance: a.balance + amount } : a,
@@ -131,8 +133,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ isInitialized, isAuthenticated, accounts, goals, login, logout, addGoal, updateGoal, depositToGoal, completeGoal, deposit }),
-    [isInitialized, isAuthenticated, accounts, goals, login, logout, addGoal, updateGoal, depositToGoal, completeGoal, deposit],
+    () => ({ isInitialized, isAuthenticated, accounts, goals, login, logout, addGoal, updateGoal, depositToGoal, completeGoal, adjustBalance }),
+    [isInitialized, isAuthenticated, accounts, goals, login, logout, addGoal, updateGoal, depositToGoal, completeGoal, adjustBalance],
   );
 
   return (

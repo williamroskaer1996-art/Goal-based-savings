@@ -40,7 +40,7 @@ function GoalSheet({
     goal.monthlyDeposit ? String(goal.monthlyDeposit) : ''
   );
   const [monthlySaved,    setMonthlySaved]    = useState(false);
-  const QUICK        = [50, 100, 250];
+  const QUICK         = [50, 100, 250];
   const MONTHLY_QUICK = [25, 50, 100];
 
   const fromAccount = accounts.find(a => a.id === fromId);
@@ -343,8 +343,8 @@ function GoalSheet({
 
             {/* Quick amounts */}
             <div className="mb-3 flex gap-2">
-              {QUICK.map(q => {
-                const val   = tab === 'once' ? amount : monthlyAmount;
+              {(tab === 'once' ? QUICK : MONTHLY_QUICK).map(q => {
+                const val    = tab === 'once' ? amount : monthlyAmount;
                 const setVal = tab === 'once' ? setAmount : setMonthlyAmount;
                 return (
                   <button key={q} type="button"
@@ -430,14 +430,6 @@ const TRANSITION_BG: Record<TriodosTransition, string> = {
   society:   '#8074FF',  // Grounded Lupine   — community, connection
   wellbeing: '#C2CBFA',  // Light Lupine      — calm, care
 };
-const TRANSITION_FG: Record<TriodosTransition, string> = {
-  energy:    '#FFFFFF',
-  resources: '#FFFFFF',
-  food:      '#FFFFFF',
-  society:   '#FFFFFF',
-  wellbeing: '#FFFFFF',
-};
-
 // Morph animation durations — each index gets a distinct rhythm
 const MORPH_DURATIONS = [16, 20, 14, 18]; // seconds
 
@@ -638,7 +630,7 @@ function Bubble({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function GoalsPage() {
   const router = useRouter();
-  const { isInitialized, isAuthenticated, accounts, goals, completeGoal, depositToGoal, deposit, updateGoal } = useAppStore();
+  const { isInitialized, isAuthenticated, accounts, goals, completeGoal, depositToGoal, adjustBalance, updateGoal } = useAppStore();
 
   const containerRef  = useRef<HTMLDivElement>(null);
   const physicsRef    = useRef<Physics[]>([]);
@@ -660,7 +652,7 @@ export default function GoalsPage() {
 
   const depositAccounts = accounts.filter(a => a.type === 'savings' || a.type === 'checking');
 
-  const allGoals       = goals.filter((g) => g.targetAmount > 0 && (g.goalType ?? 'saving') === mode);
+  const allGoals       = goals.filter((g) => g.targetAmount > 0 && g.goalType === mode);
   const activeGoals    = allGoals.filter((g) => !g.completedAt);
   const completedGoals = allGoals.filter((g) => !!g.completedAt);
   const maxAmount      = Math.max(...allGoals.map((g) => g.targetAmount), 1);
@@ -1062,7 +1054,7 @@ export default function GoalsPage() {
           accounts={depositAccounts}
           onDeposit={(amount, fromAccountId) => {
             depositToGoal(sheetGoal.id, amount);
-            deposit(fromAccountId, -amount);
+            adjustBalance(fromAccountId, -amount);
           }}
           onSetMonthly={(amount) => {
             updateGoal(sheetGoal.id, { monthlyDeposit: amount });
