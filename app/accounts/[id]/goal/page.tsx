@@ -8,23 +8,20 @@ import { ICON_TRANSITION, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { TriodosFund } from '@/lib/funds';
 
 // ── Slider scale ──────────────────────────────────────────────────────────────
-// Non-linear — 5y sits at the visual midpoint (value 50):
-//   0..50  → 1..5  years   (short-term, fine control)
-//   50..100 → 5..30 years  (long-term, coarser steps)
+// Linear 1–30 years. Each year is an equal fraction of the track.
+// Slider value IS the year (integer, step 1).
+const SLIDER_MIN = 1;
+const SLIDER_MAX = 30;
 
-function sliderToYears(v: number): number {
-  if (v <= 50) return Math.max(1, Math.round(1 + (v / 50) * 4));
-  return Math.min(30, Math.round(5 + ((v - 50) / 50) * 25));
+// Convert a year value to its exact % position on the track
+function yearToPct(year: number): number {
+  return (year - SLIDER_MIN) / (SLIDER_MAX - SLIDER_MIN) * 100;
 }
 
-function yearsToSlider(y: number): number {
-  if (y <= 5) return ((y - 1) / 4) * 50;
-  return 50 + ((y - 5) / 25) * 50;
-}
-
-// Approximate thumb-center % (accounts for 26 px thumb at edges)
-function thumbPct(sliderVal: number): number {
-  return 3.7 + (sliderVal / 100) * 92.6;
+// Offset the bubble so it follows the thumb center (26 px thumb inside the track)
+function thumbPct(year: number): number {
+  const pct = yearToPct(year);
+  return 3.7 + pct * 0.926; // maps 0%→3.7%, 100%→96.3%
 }
 
 const INVEST_THRESHOLD = 5; // years
@@ -66,10 +63,10 @@ export default function SetGoalPage() {
   const [amount,  setAmount]  = useState('');
   const [purpose, setPurpose] = useState('');
 
-  const [sliderValue,    setSliderValue]    = useState<number>(() =>
+  const [sliderYears, setSliderYears] = useState<number>(() =>
     existingGoal?.timeHorizonMonths
-      ? yearsToSlider(Math.max(1, Math.round(existingGoal.timeHorizonMonths / 12)))
-      : yearsToSlider(2),
+      ? Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, Math.round(existingGoal.timeHorizonMonths / 12)))
+      : 2,
   );
 
   // Explicit user choice — not auto-forced by slider
@@ -83,7 +80,6 @@ export default function SetGoalPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const sliderYears       = sliderToYears(sliderValue);
   const timeHorizonMonths = sliderYears * 12;
   const isLongTerm        = sliderYears >= INVEST_THRESHOLD;
 
@@ -107,7 +103,7 @@ export default function SetGoalPage() {
       setPurpose(existingGoal.purpose ?? '');
       setGoalTypeChoice(existingGoal.goalType);
       if (existingGoal.timeHorizonMonths) {
-        setSliderValue(yearsToSlider(Math.max(1, Math.round(existingGoal.timeHorizonMonths / 12))));
+        setSliderYears(Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, Math.round(existingGoal.timeHorizonMonths / 12))));
       }
     }
   }, [existingGoal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -178,8 +174,9 @@ export default function SetGoalPage() {
     router.push('/goals');
   }
 
+  const fillPct = yearToPct(sliderYears);
   const sliderTrackStyle: React.CSSProperties = {
-    background: `linear-gradient(to right, ${accentColor} ${sliderValue}%, #d6d0c8 ${sliderValue}%)`,
+    background: `linear-gradient(to right, ${accentColor} ${fillPct}%, #d6d0c8 ${fillPct}%)`,
     color: accentColor,
     transition: 'background 0.05s, color 0.4s',
   };
@@ -286,7 +283,7 @@ export default function SetGoalPage() {
             {/* Floating year bubble above the thumb */}
             <div
               className="pointer-events-none absolute top-0 -translate-x-1/2 transition-[left] duration-75"
-              style={{ left: `${thumbPct(sliderValue)}%` }}
+              style={{ left: `${thumbPct(sliderYears)}%` }}
             >
               <div
                 className="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
@@ -307,36 +304,44 @@ export default function SetGoalPage() {
               />
             </div>
 
-            {/* Track */}
+            {/* Track — linear 1-30, each year an equal step */}
             <input
               type="range"
-              min={0}
-              max={100}
-              step={0.5}
-              value={sliderValue}
-              onChange={(e) => setSliderValue(parseFloat(e.target.value))}
+              min={SLIDER_MIN}
+              max={SLIDER_MAX}
+              step={1}
+              value={sliderYears}
+              onChange={(e) => setSliderYears(parseInt(e.target.value, 10))}
               className="time-slider"
               style={sliderTrackStyle}
               aria-label="Time horizon in years"
             />
           </div>
 
-          {/* Tick marks at 5y (50%) and 10y (60%) */}
+          {/* Tick marks at mathematically exact positions */}
           <div className="relative mt-1 h-1.5">
-            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/15" style={{ left: '50%' }} />
-            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/10" style={{ left: '60%' }} />
+            {/* 5y  = (5-1)/(30-1)*100 = 13.79% */}
+            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/20"
+              style={{ left: `${yearToPct(5).toFixed(2)}%` }} />
+            {/* 10y = (10-1)/(30-1)*100 = 31.03% */}
+            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/12"
+              style={{ left: `${yearToPct(10).toFixed(2)}%` }} />
+            {/* 20y = (20-1)/(30-1)*100 = 65.52% */}
+            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/12"
+              style={{ left: `${yearToPct(20).toFixed(2)}%` }} />
           </div>
 
-          {/* Scale labels */}
+          {/* Scale labels at exact linear positions */}
           <div className="relative mt-0.5 h-4 select-none text-[10px] font-medium text-charcoal/35">
             <span className="absolute left-0">1y</span>
             <span
               className="absolute -translate-x-1/2 font-semibold"
-              style={{ left: '50%', color: `${accentColor}80`, transition: 'color 0.4s' }}
-            >
-              5y
-            </span>
-            <span className="absolute" style={{ left: 'calc(60% - 8px)' }}>10y</span>
+              style={{ left: `${yearToPct(5).toFixed(2)}%`, color: `${accentColor}80`, transition: 'color 0.4s' }}
+            >5y</span>
+            <span className="absolute -translate-x-1/2"
+              style={{ left: `${yearToPct(10).toFixed(2)}%` }}>10y</span>
+            <span className="absolute -translate-x-1/2"
+              style={{ left: `${yearToPct(20).toFixed(2)}%` }}>20y</span>
             <span className="absolute right-0">30y</span>
           </div>
         </div>
