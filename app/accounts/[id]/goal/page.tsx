@@ -8,11 +8,17 @@ import { ICON_TRANSITION, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { TriodosFund } from '@/lib/funds';
 
 // ── Transition modal content ──────────────────────────────────────────────────
-function getTransitionContent(key: TriodosTransition, goalName: string) {
-  const name = goalName.trim() || 'Your goal';
+function getTransitionContent(
+  key: TriodosTransition,
+  goalName: string,
+  goalType: 'saving' | 'investing',
+) {
+  const name   = goalName.trim() || 'your goal';
+  const action = goalType === 'investing' ? `investing in ${name}` : `saving for ${name}`;
+
   const map: Record<TriodosTransition, { body: string; bullets: string[] }> = {
     energy: {
-      body: `"${name}" is part of a bigger shift — moving away from fossil fuels toward clean, renewable energy. Every home that generates its own power, reduces energy use, or upgrades its heating is a concrete step in that direction.`,
+      body: `By ${action}, you are part of a bigger shift — away from fossil fuels and toward clean, renewable energy. Every home that generates its own power, cuts its energy use, or upgrades its heating is a real step in the right direction.`,
       bullets: [
         'Triodos finances solar parks, wind farms and battery storage across Europe',
         'Loans for home insulation, heat pumps and electric mobility',
@@ -20,7 +26,7 @@ function getTransitionContent(key: TriodosTransition, goalName: string) {
       ],
     },
     food: {
-      body: `"${name}" connects to how we grow, produce and share food. Triodos believes the food system needs to become far more sustainable — better for the soil, for farmers, and for our long-term health.`,
+      body: `By ${action}, you are contributing to a food system that is healthier for people, fairer for farmers, and kinder to the planet. Small choices like yours are part of how the whole system changes.`,
       bullets: [
         'Financing organic farmers and regenerative agriculture projects',
         'Supporting food producers shifting to sustainable practices',
@@ -28,7 +34,7 @@ function getTransitionContent(key: TriodosTransition, goalName: string) {
       ],
     },
     resources: {
-      body: `"${name}" fits into a world that uses materials more responsibly. Instead of take-make-waste, a circular economy keeps products and materials in use as long as possible — reducing impact at every step.`,
+      body: `By ${action}, you are choosing a more responsible way to use the world's materials. Instead of take-make-waste, a circular approach keeps things in use longer — and that starts with decisions like yours.`,
       bullets: [
         'Triodos funds companies building circular business models',
         'Financing sustainable mobility and low-carbon transport',
@@ -36,7 +42,7 @@ function getTransitionContent(key: TriodosTransition, goalName: string) {
       ],
     },
     society: {
-      body: `"${name}" contributes to a fairer, more connected society. Triodos believes financial services should be accessible to everyone — and that money can actively strengthen communities and reduce inequality.`,
+      body: `By ${action}, you are investing in something that strengthens communities and helps create a more fair and connected society. Triodos believes money should work for people — not just for profit.`,
       bullets: [
         'Microfinance for entrepreneurs in underserved communities',
         'Funding education, healthcare and social inclusion projects',
@@ -44,7 +50,7 @@ function getTransitionContent(key: TriodosTransition, goalName: string) {
       ],
     },
     wellbeing: {
-      body: `"${name}" is an investment in yourself. Triodos supports a transition where wellbeing — physical, mental and social — is valued alongside economic growth, not sacrificed for it.`,
+      body: `By ${action}, you are choosing to put your own health and happiness first — and that matters. Triodos believes wellbeing should be valued as much as economic growth, not treated as an afterthought.`,
       bullets: [
         'Financing healthcare providers and preventive health initiatives',
         'Supporting organisations focused on mental health and community care',
@@ -503,7 +509,7 @@ export default function SetGoalPage() {
 
       {/* ── Transition theme modal (bottom sheet) ── */}
       {showTransitionModal && (() => {
-        const content = getTransitionContent(transitionKey, name);
+        const content = getTransitionContent(transitionKey, name, goalTypeChoice);
         return (
           <>
             {/* Backdrop */}
