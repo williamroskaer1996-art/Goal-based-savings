@@ -21,13 +21,6 @@ export default function LoginPage() {
     sessionStorage.removeItem('triodos_auth');
   }, []);
 
-  // Auto-trigger Face ID after a brief moment (mimics real banking apps)
-  useEffect(() => {
-    const t = setTimeout(() => triggerFaceId(), 900);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // PIN login
   useEffect(() => {
     if (pin.length === 4) {
@@ -60,7 +53,7 @@ export default function LoginPage() {
             Welcome back.
           </h1>
           <p className="mt-1 text-sm text-charcoal/55">
-            {isScanning ? 'Scanning your face…' : isSuccess ? 'Identity verified' : 'Use Face ID or enter your PIN.'}
+            {isScanning ? 'Scanning your face…' : isSuccess ? 'Identity verified' : 'Log in with Face ID or your PIN.'}
           </p>
         </div>
       </div>
@@ -124,7 +117,7 @@ export default function LoginPage() {
         </button>
 
         <p className="text-sm font-medium" style={{ color: isSuccess ? '#004B32' : 'rgba(0,0,0,0.35)' }}>
-          {isSuccess ? 'Verified ✓' : isScanning ? 'Hold still…' : 'Use Face ID'}
+          {isSuccess ? 'Verified ✓' : isScanning ? 'Hold still…' : 'Tap to scan'}
         </p>
 
         {/* PIN fallback toggle */}
