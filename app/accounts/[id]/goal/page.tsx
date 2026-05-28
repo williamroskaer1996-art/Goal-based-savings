@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import type { GoalIconKey } from '@/lib/types';
-import { ICON_TRANSITION } from '@/lib/types';
+import { ICON_TRANSITION, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { TriodosFund } from '@/lib/funds';
 
-// ── Slider helpers ────────────────────────────────────────────────────────────
-// Non-linear scale — 5 years sits at the visual midpoint (value 50):
-//   0..50  → 1..5  years (short-term, fine precision)
-//   50..100 → 5..30 years (long-term, coarser steps)
+// ── Slider scale ──────────────────────────────────────────────────────────────
+// Non-linear — 5y sits at the visual midpoint (value 50):
+//   0..50  → 1..5  years   (short-term, fine control)
+//   50..100 → 5..30 years  (long-term, coarser steps)
 
 function sliderToYears(v: number): number {
   if (v <= 50) return Math.max(1, Math.round(1 + (v / 50) * 4));
@@ -22,23 +22,28 @@ function yearsToSlider(y: number): number {
   return 50 + ((y - 5) / 25) * 50;
 }
 
-const LONG_TERM_YEARS = 5;
+// Approximate thumb-center % (accounts for 26 px thumb at edges)
+function thumbPct(sliderVal: number): number {
+  return 3.7 + (sliderVal / 100) * 92.6;
+}
 
-// ── Goal icon auto-categoriser ────────────────────────────────────────────────
-function categorizeGoal(goalName: string): GoalIconKey {
-  const n = goalName.toLowerCase();
-  if (/solar|panel|insul|heat|wind|electric|energy|roof/.test(n))      return 'home';
-  if (/e-bike|ebike|cargo.bike|bicycle|bike/.test(n))                  return 'bike';
-  if (/car|vehicle|ev |electric.car|tesla/.test(n))                    return 'car';
-  if (/garden|plant|veggie|vegetable|grow|farm|organic/.test(n))       return 'garden';
-  if (/train|trip|travel|inter.?rail|journey|europe/.test(n))          return 'train';
-  if (/holiday|vacation|ski|beach|resort|abroad/.test(n))              return 'holiday';
-  if (/health|gym|fitness|sport|doctor|medical|wellness/.test(n))      return 'health';
-  if (/course|school|study|learn|education|uni|degree/.test(n))        return 'education';
-  if (/phone|fairphone|laptop|repair|tool|device/.test(n))             return 'tools';
-  if (/gift|birthday|present|wedding|anniversar/.test(n))              return 'gift';
-  if (/safety|security|insurance|emergency/.test(n))                   return 'safety';
-  if (/pet|dog|cat|animal|vet/.test(n))                                return 'pet';
+const INVEST_THRESHOLD = 5; // years
+
+// ── Goal name → icon ──────────────────────────────────────────────────────────
+function categorizeGoal(n: string): GoalIconKey {
+  const s = n.toLowerCase();
+  if (/solar|panel|insul|heat|wind|electric|energy|roof/.test(s))     return 'home';
+  if (/e-bike|ebike|cargo.bike|bicycle|bike/.test(s))                 return 'bike';
+  if (/car|vehicle|ev |electric.car|tesla/.test(s))                   return 'car';
+  if (/garden|plant|veggie|vegetable|grow|farm|organic/.test(s))      return 'garden';
+  if (/train|trip|travel|inter.?rail|journey|europe/.test(s))         return 'train';
+  if (/holiday|vacation|ski|beach|resort|abroad/.test(s))             return 'holiday';
+  if (/health|gym|fitness|sport|doctor|medical|wellness/.test(s))     return 'health';
+  if (/course|school|study|learn|education|uni|degree/.test(s))       return 'education';
+  if (/phone|fairphone|laptop|repair|tool|device/.test(s))            return 'tools';
+  if (/gift|birthday|present|wedding|anniversar/.test(s))             return 'gift';
+  if (/safety|security|insurance|emergency/.test(s))                  return 'safety';
+  if (/pet|dog|cat|animal|vet/.test(s))                               return 'pet';
   return 'other';
 }
 
@@ -56,25 +61,43 @@ export default function SetGoalPage() {
   const account      = accounts.find((a) => a.id === id);
   const existingGoal = editGoalId ? goals.find((g) => g.id === editGoalId) : null;
 
-  const [name,        setName]        = useState('');
-  const [amount,      setAmount]      = useState('');
-  const [purpose,     setPurpose]     = useState('');
-  const [sliderValue, setSliderValue] = useState<number>(() =>
+  // ── Form state ───────────────────────────────────────────────────────────
+  const [name,    setName]    = useState('');
+  const [amount,  setAmount]  = useState('');
+  const [purpose, setPurpose] = useState('');
+
+  const [sliderValue,    setSliderValue]    = useState<number>(() =>
     existingGoal?.timeHorizonMonths
       ? yearsToSlider(Math.max(1, Math.round(existingGoal.timeHorizonMonths / 12)))
       : yearsToSlider(2),
   );
 
+  // Explicit user choice — not auto-forced by slider
+  const [goalTypeChoice, setGoalTypeChoice] = useState<'saving' | 'investing'>(() =>
+    existingGoal?.goalType ?? 'saving',
+  );
+
+  // ── Recommendation state ─────────────────────────────────────────────────
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loadingRec,     setLoadingRec]     = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const sliderYears                      = sliderToYears(sliderValue);
-  const timeHorizonMonths                = sliderYears * 12;
-  const isLongTerm                       = sliderYears >= LONG_TERM_YEARS;
-  const goalType: 'saving' | 'investing' = isLongTerm ? 'investing' : 'saving';
-  const accentColor                      = isLongTerm ? '#8074FF' : '#004B32';
+  const sliderYears       = sliderToYears(sliderValue);
+  const timeHorizonMonths = sliderYears * 12;
+  const isLongTerm        = sliderYears >= INVEST_THRESHOLD;
+
+  // Transition theme from goal name
+  const iconKey        = name.trim() ? categorizeGoal(name) : 'other';
+  const transitionKey  = ICON_TRANSITION[iconKey];
+  const transitionInfo = TRIODOS_TRANSITIONS[transitionKey];
+  const showTransition = iconKey !== 'other' && name.trim().length > 1;
+
+  // Fund recommendation shows when user picks investing + has a goal name
+  const showFundRec = goalTypeChoice === 'investing' && !!name.trim();
+
+  // Accent follows goal type choice
+  const accentColor = goalTypeChoice === 'investing' ? '#8074FF' : '#004B32';
 
   // ── Pre-fill when editing ────────────────────────────────────────────────
   useEffect(() => {
@@ -82,6 +105,7 @@ export default function SetGoalPage() {
       setName(existingGoal.name);
       setAmount(existingGoal.targetAmount > 0 ? String(existingGoal.targetAmount) : '');
       setPurpose(existingGoal.purpose ?? '');
+      setGoalTypeChoice(existingGoal.goalType);
       if (existingGoal.timeHorizonMonths) {
         setSliderValue(yearsToSlider(Math.max(1, Math.round(existingGoal.timeHorizonMonths / 12))));
       }
@@ -92,11 +116,11 @@ export default function SetGoalPage() {
     if (isInitialized && !isAuthenticated) router.replace('/login');
   }, [isInitialized, isAuthenticated, router]);
 
-  // ── AI recommendation — debounced ────────────────────────────────────────
+  // ── AI fund recommendation — debounced ───────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!isLongTerm || !name.trim()) {
+    if (!showFundRec) {
       setRecommendation(null);
       setLoadingRec(false);
       return;
@@ -128,7 +152,7 @@ export default function SetGoalPage() {
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLongTerm, name, sliderYears]);
+  }, [showFundRec, name, sliderYears]);
 
   // ── Save ─────────────────────────────────────────────────────────────────
   function handleSave() {
@@ -143,7 +167,7 @@ export default function SetGoalPage() {
       iconKey:          resolvedIcon,
       purpose:          purpose.trim() || undefined,
       transition:       ICON_TRANSITION[resolvedIcon],
-      goalType,
+      goalType:         goalTypeChoice,
       timeHorizonMonths,
     };
     if (existingGoal) {
@@ -154,10 +178,10 @@ export default function SetGoalPage() {
     router.push('/goals');
   }
 
-  const sliderPct   = sliderValue; // 0-100 maps directly to %
-  const trackStyle: React.CSSProperties = {
-    background: `linear-gradient(to right, ${accentColor} ${sliderPct}%, #d6d0c8 ${sliderPct}%)`,
+  const sliderTrackStyle: React.CSSProperties = {
+    background: `linear-gradient(to right, ${accentColor} ${sliderValue}%, #d6d0c8 ${sliderValue}%)`,
     color: accentColor,
+    transition: 'background 0.05s, color 0.4s',
   };
 
   const isEditing = !!existingGoal;
@@ -165,7 +189,7 @@ export default function SetGoalPage() {
 
   return (
     <main className="flex min-h-dvh flex-col">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 pt-6">
         <button
           type="button"
@@ -177,19 +201,19 @@ export default function SetGoalPage() {
             <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
           </svg>
         </button>
-        <h1 className="font-display text-base font-bold" style={{ color: accentColor, fontWeight: 700, transition: 'color 0.4s' }}>
-          {isEditing ? 'Edit goal' : isLongTerm ? 'Set investment goal' : 'Set savings goal'}
-        </h1>
+        <p className="text-sm font-semibold text-charcoal/55">
+          {isEditing ? 'Edit goal' : 'New goal'}
+        </p>
         <div className="w-9" />
       </div>
 
-      {/* Form */}
+      {/* ── Form ── */}
       <div className="mt-6 flex flex-col gap-6 px-5 pb-44">
 
-        {/* Goal name */}
+        {/* ── Goal name ── */}
         <div>
-          <label className="mb-2 block text-sm font-semibold text-charcoal/70" htmlFor="goal-name">
-            What is your savings goal?
+          <label className="mb-2 block text-sm font-semibold text-charcoal/65" htmlFor="goal-name">
+            What is your goal?
           </label>
           <input
             id="goal-name"
@@ -199,13 +223,26 @@ export default function SetGoalPage() {
             placeholder="E.g. Solar panels"
             className="w-full rounded-xl border border-grounded-green/15 bg-white px-4 py-3.5 text-base text-charcoal placeholder:text-charcoal/30 focus:border-grounded-green/50 focus:outline-none focus:ring-2 focus:ring-grounded-green/10"
           />
+
+          {/* Transition theme chip — fades in once goal name is recognised */}
+          <div
+            className="mt-2 overflow-hidden transition-all duration-300"
+            style={{ maxHeight: showTransition ? '32px' : '0px', opacity: showTransition ? 1 : 0 }}
+          >
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+              style={{ background: transitionInfo.bgColor, color: transitionInfo.color }}
+            >
+              {transitionInfo.emoji}&nbsp;{transitionInfo.label} transition
+            </span>
+          </div>
         </div>
 
-        {/* Amount */}
+        {/* ── Amount ── */}
         <div>
-          <label className="mb-2 block text-sm font-semibold text-charcoal/70" htmlFor="goal-amount">
-            How much do you want to save?{' '}
-            <span className="font-normal text-charcoal/40">(optional)</span>
+          <label className="mb-2 block text-sm font-semibold text-charcoal/65" htmlFor="goal-amount">
+            Target amount{' '}
+            <span className="font-normal text-charcoal/35">(optional)</span>
           </label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-charcoal/40">€</span>
@@ -222,11 +259,11 @@ export default function SetGoalPage() {
           </div>
         </div>
 
-        {/* Purpose */}
+        {/* ── Purpose ── */}
         <div>
-          <label className="mb-2 block text-sm font-semibold text-charcoal/70" htmlFor="goal-purpose">
+          <label className="mb-2 block text-sm font-semibold text-charcoal/65" htmlFor="goal-purpose">
             What is it for?{' '}
-            <span className="font-normal text-charcoal/40">(optional)</span>
+            <span className="font-normal text-charcoal/35">(optional)</span>
           </label>
           <input
             id="goal-purpose"
@@ -238,39 +275,64 @@ export default function SetGoalPage() {
           />
         </div>
 
-        {/* Time horizon */}
+        {/* ── Time horizon slider ── */}
         <div>
-          <label className="mb-3 block text-sm font-semibold text-charcoal/70">
-            When do you want to reach this goal?
+          <label className="mb-3 block text-sm font-semibold text-charcoal/65">
+            Time horizon
           </label>
 
-          {/* Year display */}
-          <p
-            className="font-display mb-4 text-[36px] font-black leading-none"
-            style={{ color: accentColor, fontWeight: 800, transition: 'color 0.4s' }}
-          >
-            {sliderYears === 1 ? '1 year' : `${sliderYears} years`}
-          </p>
+          {/* Slider — pt makes room for the floating bubble above */}
+          <div className="relative pt-9">
+            {/* Floating year bubble above the thumb */}
+            <div
+              className="pointer-events-none absolute top-0 -translate-x-1/2 transition-[left] duration-75"
+              style={{ left: `${thumbPct(sliderValue)}%` }}
+            >
+              <div
+                className="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+                style={{
+                  background:  'white',
+                  color:       accentColor,
+                  border:      `1.5px solid ${accentColor}30`,
+                  transition:  'color 0.4s, border-color 0.4s',
+                  whiteSpace:  'nowrap',
+                }}
+              >
+                {sliderYears === 1 ? '1 year' : `${sliderYears} years`}
+              </div>
+              {/* Tiny arrow pointing down */}
+              <div
+                className="mx-auto mt-px h-1.5 w-1.5 rotate-45 rounded-sm"
+                style={{ background: accentColor, opacity: 0.3, transition: 'background 0.4s' }}
+              />
+            </div>
 
-          {/* Slider */}
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={0.5}
-            value={sliderValue}
-            onChange={(e) => setSliderValue(parseFloat(e.target.value))}
-            className="time-slider"
-            style={trackStyle}
-            aria-label="Time horizon in years"
-          />
+            {/* Track */}
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={0.5}
+              value={sliderValue}
+              onChange={(e) => setSliderValue(parseFloat(e.target.value))}
+              className="time-slider"
+              style={sliderTrackStyle}
+              aria-label="Time horizon in years"
+            />
+          </div>
 
-          {/* Scale labels — 1y at 0%, 5y at 50%, 10y at 60%, 30y at 100% */}
-          <div className="relative mt-2 h-4 text-[10px] font-semibold text-charcoal/35">
+          {/* Tick marks at 5y (50%) and 10y (60%) */}
+          <div className="relative mt-1 h-1.5">
+            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/15" style={{ left: '50%' }} />
+            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/10" style={{ left: '60%' }} />
+          </div>
+
+          {/* Scale labels */}
+          <div className="relative mt-0.5 h-4 select-none text-[10px] font-medium text-charcoal/35">
             <span className="absolute left-0">1y</span>
             <span
-              className="absolute -translate-x-1/2"
-              style={{ left: '50%', color: `${accentColor}70`, transition: 'color 0.4s' }}
+              className="absolute -translate-x-1/2 font-semibold"
+              style={{ left: '50%', color: `${accentColor}80`, transition: 'color 0.4s' }}
             >
               5y
             </span>
@@ -279,17 +341,77 @@ export default function SetGoalPage() {
           </div>
         </div>
 
-        {/* Fund recommendation — slides in for long-term goals */}
+        {/* ── Goal type toggle ── */}
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-charcoal/65">
+            Goal type
+          </label>
+
+          <div className="flex gap-1.5 rounded-xl border border-grounded-green/12 bg-white p-1">
+            {/* Savings */}
+            <button
+              type="button"
+              onClick={() => setGoalTypeChoice('saving')}
+              className="flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all duration-200"
+              style={{
+                background: goalTypeChoice === 'saving' ? '#004B32' : 'transparent',
+                color:      goalTypeChoice === 'saving' ? 'white' : 'rgba(34,34,34,0.45)',
+              }}
+            >
+              Savings
+            </button>
+
+            {/* Investment — relative so badge can be placed on it */}
+            <div className="relative flex-1">
+              <button
+                type="button"
+                onClick={() => setGoalTypeChoice('investing')}
+                className="w-full rounded-lg py-2.5 text-sm font-semibold transition-all duration-200"
+                style={{
+                  background: goalTypeChoice === 'investing' ? '#8074FF' : 'transparent',
+                  color:      goalTypeChoice === 'investing' ? 'white' : 'rgba(34,34,34,0.45)',
+                }}
+              >
+                Investment
+              </button>
+
+              {/* "Suggested" badge — only when time > 5y and savings is still selected */}
+              {isLongTerm && goalTypeChoice === 'saving' && (
+                <span
+                  className="pointer-events-none absolute -right-1 -top-2 rounded-full px-1.5 py-px text-[9px] font-bold text-white"
+                  style={{ background: '#8074FF' }}
+                >
+                  Suggested
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Soft nudge when savings + long-term */}
+          <div
+            className="overflow-hidden transition-all duration-300"
+            style={{
+              maxHeight: goalTypeChoice === 'saving' && isLongTerm ? '28px' : '0px',
+              opacity:   goalTypeChoice === 'saving' && isLongTerm ? 1 : 0,
+            }}
+          >
+            <p className="mt-1.5 text-xs text-charcoal/40">
+              Investment funds tend to grow more over {sliderYears}+ years.
+            </p>
+          </div>
+        </div>
+
+        {/* ── Fund recommendation (investing + name filled) ── */}
         <div
           className="overflow-hidden transition-all duration-500"
-          style={{ maxHeight: isLongTerm ? '400px' : '0px', opacity: isLongTerm ? 1 : 0 }}
+          style={{ maxHeight: showFundRec ? '320px' : '0px', opacity: showFundRec ? 1 : 0 }}
         >
           <div
             className="rounded-2xl p-4"
             style={{ border: '1.5px solid #8074FF28', background: '#8074FF08' }}
           >
-            {/* No goal name yet */}
-            {!name.trim() && !loadingRec && (
+            {/* No name yet */}
+            {!name.trim() && (
               <p className="text-sm text-charcoal/40">
                 Enter a goal name to get a fund recommendation.
               </p>
@@ -323,7 +445,7 @@ export default function SetGoalPage() {
 
       </div>
 
-      {/* Sticky CTA */}
+      {/* ── Sticky CTA ── */}
       <div className="fixed bottom-0 left-1/2 w-full max-w-md -translate-x-1/2 bg-gradient-to-t from-birch-skin via-birch-skin/95 to-birch-skin/0 px-5 pb-8 pt-6">
         <button
           type="button"
@@ -332,7 +454,7 @@ export default function SetGoalPage() {
           className="w-full rounded-xl py-4 text-base font-semibold text-white shadow-card transition active:scale-[0.99] disabled:opacity-40"
           style={{ backgroundColor: accentColor, transition: 'background-color 0.4s' }}
         >
-          {isEditing ? 'Save changes' : isLongTerm ? 'Save investment goal' : 'Save goal'}
+          {isEditing ? 'Save changes' : goalTypeChoice === 'investing' ? 'Save investment goal' : 'Save goal'}
         </button>
       </div>
     </main>

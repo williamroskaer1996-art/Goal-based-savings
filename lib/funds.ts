@@ -220,8 +220,9 @@ export function recommendFundByKeyword(
   const text = `${goalName} ${purpose}`.toLowerCase();
   const minYears = timeHorizonMonths / 12;
 
-  // Filter to funds whose minimum horizon fits
-  const eligible = TRIODOS_FUNDS.filter(f => f.minHorizonYears <= minYears * 1.1);
+  // Prefer funds suited to the time horizon; always include ≥5y funds as a floor
+  // so short-term investment goals still get a sensible conservative recommendation.
+  const eligible = TRIODOS_FUNDS.filter(f => f.minHorizonYears <= Math.max(minYears, 5));
 
   let best = eligible[0] ?? TRIODOS_FUNDS[11]; // impact-mixed as safe default
   let bestScore = -1;
