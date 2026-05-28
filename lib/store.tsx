@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Account, GoalAccount } from './types';
-import { INITIAL_ACCOUNTS } from './mockData';
+import { INITIAL_ACCOUNTS, INITIAL_GOALS } from './mockData';
 
 type AppStoreValue = {
   isInitialized: boolean;
@@ -34,6 +34,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
   const [goals, setGoals] = useState<GoalAccount[]>([]);
 
+  // Bump this string whenever INITIAL_GOALS changes — forces a reset in all browsers.
+  const DATA_VERSION = 'v5';
+
   // Rehydrate from sessionStorage after mount (avoids SSR mismatch)
   useEffect(() => {
     if (sessionStorage.getItem('triodos_auth') === '1') {
@@ -41,12 +44,29 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
     try {
       const savedAccounts = sessionStorage.getItem('triodos_accounts');
-      if (savedAccounts) setAccounts(JSON.parse(savedAccounts) as Account[]);
+      if (savedAccounts) {
+        // Always use INITIAL_ACCOUNTS as source of truth for static fields
+        // (name, IBAN, type) — only restore the mutable balance from cache.
+        const parsed = JSON.parse(savedAccounts) as Account[];
+        const merged = INITIAL_ACCOUNTS.map(init => {
+          const saved = parsed.find(a => a.id === init.id);
+          return saved ? { ...init, balance: saved.balance } : init;
+        });
+        setAccounts(merged);
+      }
       const savedGoals = sessionStorage.getItem('triodos_goals');
-      if (savedGoals) setGoals(JSON.parse(savedGoals) as GoalAccount[]);
+      const savedVersion = sessionStorage.getItem('triodos_data_version');
+      if (savedGoals && savedVersion === DATA_VERSION) {
+        setGoals(JSON.parse(savedGoals) as GoalAccount[]);
+      } else {
+        // First load or stale data — seed with current defaults
+        setGoals(INITIAL_GOALS);
+        sessionStorage.setItem('triodos_goals', JSON.stringify(INITIAL_GOALS));
+        sessionStorage.setItem('triodos_data_version', DATA_VERSION);
+      }
     } catch {}
     setIsInitialized(true);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(() => {
     sessionStorage.setItem('triodos_auth', '1');

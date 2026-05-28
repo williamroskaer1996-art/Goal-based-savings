@@ -33,7 +33,20 @@ export default function HomePage() {
         <h1 className="font-display text-xl font-bold text-grounded-green whitespace-nowrap" style={{ fontWeight: 700 }}>
           Account overview
         </h1>
-        <TriodosLogo />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            aria-label="Lock / log out"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-charcoal/40 transition hover:bg-grounded-green/8 hover:text-grounded-green active:scale-95"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth={2} />
+              <path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+            </svg>
+          </button>
+          <TriodosLogo />
+        </div>
       </header>
 
       {/* Quick action pills */}
@@ -79,13 +92,15 @@ export default function HomePage() {
 
       {/* Goals CTA — Set goals / See goals */}
       {(() => {
-        const activeGoals = goals.filter((g) => !g.completedAt && g.targetAmount > 0);
+        const activeGoals = goals.filter((g) => !g.completedAt);
+        const hasGoals = goals.length > 0;
         const hasActive = activeGoals.length > 0;
-        const goalsLabel = hasActive ? 'See goals' : 'Set goals';
+        const goalsLabel = hasGoals ? 'See goals' : 'Set goals';
         const goalsSubtitle = hasActive
           ? `${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''}`
+          : hasGoals ? 'View your completed goals'
           : 'Define your savings goals';
-        const goalsHref = hasActive ? '/goals' : '/accounts/savings-1/goal';
+        const goalsHref = '/goals';
         return (
           <button
             type="button"

@@ -43,7 +43,8 @@ export default function RootLayout({
       </head>
       <body className="bg-birch-skin text-charcoal antialiased">
         <AppStoreProvider>
-          <div className="mx-auto min-h-screen w-full max-w-md bg-birch-skin">
+          {/* pt-[54px] clears the status bar / Dynamic Island in the mockup iframe */}
+          <div className="mx-auto min-h-screen w-full max-w-md bg-birch-skin pt-[54px]">
             {children}
           </div>
         </AppStoreProvider>

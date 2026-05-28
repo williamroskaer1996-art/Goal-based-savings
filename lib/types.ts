@@ -11,6 +11,7 @@ export type GoalIconKey =
   | 'garden'
   | 'tools'
   | 'safety'
+  | 'train'
   | 'other';
 
 export const GOAL_ICONS: Record<GoalIconKey, { label: string; emoji: string }> = {
@@ -26,6 +27,7 @@ export const GOAL_ICONS: Record<GoalIconKey, { label: string; emoji: string }> =
   garden:    { label: 'Garden',    emoji: '🌿' },
   tools:     { label: 'Tools',     emoji: '🔧' },
   safety:    { label: 'Safety',    emoji: '🛡️' },
+  train:     { label: 'Train',     emoji: '🚆' },
   other:     { label: 'Other',     emoji: '⭐' },
 };
 
@@ -77,6 +79,25 @@ export const TRIODOS_TRANSITIONS: Record<TriodosTransition, TransitionInfo> = {
   },
 };
 
+// ── Auto-transition mapping ───────────────────────────────────────────────────
+// Each goal icon is automatically assigned to one of the five Triodos transitions.
+export const ICON_TRANSITION: Record<GoalIconKey, TriodosTransition> = {
+  home:      'energy',    // home improvements, insulation, solar
+  tools:     'energy',    // repairs, energy-efficient upgrades
+  car:       'energy',    // electric vehicles
+  bike:      'resources', // sustainable mobility, circular economy
+  travel:    'resources', // conscious travel choices
+  garden:    'food',      // growing food, nature connection
+  pet:       'wellbeing', // care and companionship
+  health:    'wellbeing', // personal health and vitality
+  holiday:   'wellbeing', // rest and renewal
+  education: 'society',   // learning, access to knowledge
+  gift:      'society',   // generosity and connection
+  safety:    'society',   // security, community care
+  train:     'resources', // low-carbon travel, circular mobility
+  other:     'society',   // default
+};
+
 // ── Partnerships ──────────────────────────────────────────────────────────────
 export type Partnership = {
   id: string;
@@ -87,6 +108,11 @@ export type Partnership = {
   emoji: string;
   categories: GoalIconKey[];
   transition: TriodosTransition;
+  suggested: {
+    goalName: string;
+    amount: number;
+    purpose: string;
+  };
 };
 
 export const PARTNERSHIPS: Partnership[] = [
@@ -99,6 +125,11 @@ export const PARTNERSHIPS: Partnership[] = [
     emoji: '☀️',
     categories: ['home', 'garden', 'tools'],
     transition: 'energy',
+    suggested: {
+      goalName: 'Solar panels',
+      amount: 8000,
+      purpose: 'Become energy independent at home',
+    },
   },
   {
     id: 'babbel',
@@ -109,6 +140,11 @@ export const PARTNERSHIPS: Partnership[] = [
     emoji: '🗣️',
     categories: ['education', 'travel', 'holiday'],
     transition: 'society',
+    suggested: {
+      goalName: 'Language course',
+      amount: 150,
+      purpose: 'Learn a new language and connect with more people',
+    },
   },
   {
     id: 'gazelle',
@@ -119,6 +155,11 @@ export const PARTNERSHIPS: Partnership[] = [
     emoji: '⚡',
     categories: ['bike', 'travel'],
     transition: 'resources',
+    suggested: {
+      goalName: 'Gazelle e-bike',
+      amount: 2500,
+      purpose: 'Get around sustainably without a car',
+    },
   },
   {
     id: 'fairphone',
@@ -129,6 +170,11 @@ export const PARTNERSHIPS: Partnership[] = [
     emoji: '📱',
     categories: ['tools', 'other', 'education'],
     transition: 'resources',
+    suggested: {
+      goalName: 'Fairphone',
+      amount: 600,
+      purpose: 'Replace my phone with a sustainable, repairable alternative',
+    },
   },
   {
     id: 'patagonia',
@@ -139,6 +185,11 @@ export const PARTNERSHIPS: Partnership[] = [
     emoji: '🧥',
     categories: ['holiday', 'travel', 'health', 'other'],
     transition: 'wellbeing',
+    suggested: {
+      goalName: 'Winter jacket',
+      amount: 350,
+      purpose: 'Invest in quality outerwear that lasts for years',
+    },
   },
 ];
 
@@ -153,6 +204,9 @@ export type GoalAccount = {
   transition?: TriodosTransition;
   partnershipId?: string;
   completedAt?: string;
+  monthlyDeposit?: number;
+  /** 'saving' (default) or 'investing' */
+  goalType?: 'saving' | 'investing';
 };
 
 export type Account = {

@@ -40,14 +40,33 @@ input[type='number'] {
   letter-spacing: -0.01em;
 }
 
-/* Bubble physics & flip animations */
-@keyframes bubble-burst {
-  0%   { transform: scale(1);   opacity: 1; }
-  40%  { transform: scale(1.35); opacity: 1; }
-  100% { transform: scale(0);   opacity: 0; }
+/* Blob morph animations — 4 variants, long durations for calm organic feel */
+@keyframes blob-morph-0 {
+  0%, 100% { border-radius: 58% 42% 55% 45% / 48% 54% 46% 52%; }
+  33%       { border-radius: 45% 55% 42% 58% / 54% 46% 58% 42%; }
+  66%       { border-radius: 52% 48% 60% 40% / 42% 58% 46% 54%; }
 }
-.bubble-burst {
-  animation: bubble-burst 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+@keyframes blob-morph-1 {
+  0%, 100% { border-radius: 42% 58% 62% 38% / 56% 44% 38% 62%; }
+  50%       { border-radius: 62% 38% 42% 58% / 38% 62% 58% 42%; }
+}
+@keyframes blob-morph-2 {
+  0%, 100% { border-radius: 64% 36% 48% 52% / 44% 56% 62% 38%; }
+  50%       { border-radius: 36% 64% 56% 44% / 64% 36% 40% 60%; }
+}
+@keyframes blob-morph-3 {
+  0%, 100% { border-radius: 52% 48% 38% 62% / 62% 38% 52% 48%; }
+  50%       { border-radius: 38% 62% 52% 48% / 48% 52% 62% 38%; }
+}
+
+/* Blob burst — gentle expand then dissolve */
+@keyframes blob-burst {
+  0%   { transform: scale(1);    opacity: 1; }
+  45%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(0.2);  opacity: 0; }
+}
+.blob-burst {
+  animation: blob-burst 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
 
 @keyframes goal-complete-msg {
@@ -60,19 +79,11 @@ input[type='number'] {
   animation: goal-complete-msg 3s ease forwards;
 }
 
-.flip-card {
-  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-  position: relative;
-  width: 100%;
-  height: 100%;
+/* Wrapped — slide entrance */
+@keyframes wrapped-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
-.flip-card.flipped { transform: rotateY(180deg); }
-.flip-face {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+.wrapped-enter {
+  animation: wrapped-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-.flip-face-back { transform: rotateY(180deg); }
