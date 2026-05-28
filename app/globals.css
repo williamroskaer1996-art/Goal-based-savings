@@ -97,6 +97,43 @@ input[type='number'] {
   to   { transform: translateX(110%); }
 }
 
+/* ── Time-horizon slider ─────────────────────────────────────────────────── */
+.time-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.25s ease;
+}
+.time-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid currentColor;
+  cursor: grab;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.time-slider:active::-webkit-slider-thumb {
+  transform: scale(1.14);
+  cursor: grabbing;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.time-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid currentColor;
+  cursor: grab;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 /* Wrapped — slide entrance */
 @keyframes wrapped-enter {
   from { opacity: 0; transform: translateY(18px) scale(0.97); }

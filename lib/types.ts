@@ -110,6 +110,7 @@ export type GoalAccount = {
   completedAt?: string;
   monthlyDeposit?: number;
   goalType: 'saving' | 'investing';
+  timeHorizonMonths?: number;
 };
 
 export type Account = {
