@@ -430,21 +430,21 @@ const TRANSITION_BG: Record<TriodosTransition, string> = {
   society:   '#8074FF',  // Grounded Lupine   — community, connection
   wellbeing: '#C2CBFA',  // Light Lupine      — calm, care
 };
-// Morph animation durations — each index gets a distinct rhythm
-const MORPH_DURATIONS = [16, 20, 14, 18]; // seconds
+// Morph animation durations — each index gets a distinct rhythm (slower = more dreamlike)
+const MORPH_DURATIONS = [26, 34, 21, 29]; // seconds
 
 // ── Physics constants — calm, organic, floating ───────────────────────────────
 const GRAVITY     = 0;       // no gravity — shapes float freely
-const FRICTION    = 0.982;   // gentle deceleration each frame
-const RESTITUTION = 0.16;    // very soft collisions — shapes nudge, not bounce
+const FRICTION    = 0.988;   // slower deceleration — blobs drift longer
+const RESTITUTION = 0.08;    // very soft collisions — shapes barely nudge
 const NAV_H       = 92;
 
 // ── Deformation constants — organic squish on contact ────────────────────────
 const DEFORM_ZONE  = 50;    // px beyond contact surface that triggers deformation
 const SQUISH       = 0.20;  // max flatten strength along contact normal
 const BULGE        = 0.09;  // max bulge strength perpendicular to normal
-const LERP_TOWARD  = 0.18;  // how quickly deformation builds (snappy on impact)
-const LERP_AWAY    = 0.055; // how slowly shape recovers (lingering, organic spring-back)
+const LERP_TOWARD  = 0.13;  // how quickly deformation builds
+const LERP_AWAY    = 0.028; // how slowly shape recovers — long, organic spring-back
 
 type Physics = {
   x: number; y: number;
@@ -525,7 +525,7 @@ function Bubble({
       <div style={{
         width: '100%', height: '100%',
         transformStyle: 'preserve-3d',
-        transition: 'transform 0.52s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'transform 0.85s cubic-bezier(0.34, 1.08, 0.64, 1)',
         transform: isFlipped ? 'rotateY(180deg)' : 'none',
       }}>
 
@@ -639,6 +639,18 @@ export default function GoalsPage() {
   const initedCount   = useRef(0);
   const impulseRef    = useRef(0); // frame counter for periodic gentle nudges
 
+  // Toggle drag
+  const toggleRef     = useRef<HTMLDivElement>(null);
+  const pillDragData  = useRef({ active: false, startX: 0, startOffset: 0, maxOffset: 0, currentOffset: 0 });
+  const [pillDragOffset, setPillDragOffset] = useState<number | null>(null);
+
+  // Blob slide transition
+  type ExitBlob = { id: string; x: number; y: number; r: number; bg: string; emoji: string };
+  const [slideKey,      setSlideKey]      = useState(0);
+  const [slideEnterDir, setSlideEnterDir] = useState<'left' | 'right' | null>(null);
+  const [exitBlobs,     setExitBlobs]     = useState<ExitBlob[]>([]);
+  const [exitDir,       setExitDir]       = useState<'left' | 'right' | null>(null);
+
   const [mode,        setMode]        = useState<'saving' | 'investing'>('saving');
   const [positions,   setPositions]   = useState<{ x: number; y: number; dm11: number; dm12: number; dm22: number }[]>([]);
   const [burstIds,    setBurstIds]    = useState<Set<string>>(new Set());
@@ -657,14 +669,82 @@ export default function GoalsPage() {
   const completedGoals = allGoals.filter((g) => !!g.completedAt);
   const maxAmount      = Math.max(...allGoals.map((g) => g.targetAmount), 1);
 
-  // Reset physics when mode changes so blobs re-initialise for the new set
-  useEffect(() => {
+  // ── Switch mode — captures exit snapshot, animates slide, resets physics ──
+  function switchMode(newMode: 'saving' | 'investing') {
+    if (newMode === mode) return;
+
+    // Snapshot current blobs for the exit animation
+    const snapshot: ExitBlob[] = allGoals.flatMap((g, i) => {
+      const pos = positions[i];
+      if (!pos) return [];
+      const r  = getRadius(g.targetAmount, maxAmount);
+      const bg = g.completedAt ? '#DFFF57' : (g.transition ? TRANSITION_BG[g.transition] : '#004B32');
+      return [{ id: g.id, x: pos.x, y: pos.y, r, bg, emoji: GOAL_ICONS[g.iconKey].emoji }];
+    });
+
+    const dir = newMode === 'investing' ? 'left' : 'right';
+    setExitBlobs(snapshot);
+    setExitDir(dir);
+    setSlideEnterDir(dir === 'left' ? 'right' : 'left');
+    setSlideKey(k => k + 1);
+
+    // Reset physics immediately via refs, then batch state
     physicsRef.current = [];
     initedCount.current = 0;
     setPositions([]);
+    setMode(newMode);
     setBurstIds(new Set());
     setFlippedIds(new Set());
-  }, [mode]);
+
+    // Clear exit layer after animation completes
+    setTimeout(() => {
+      setExitBlobs([]);
+      setExitDir(null);
+      setSlideEnterDir(null);
+    }, 700);
+  }
+
+  // ── Toggle pill drag handlers ─────────────────────────────────────────────
+  function handleTogglePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!toggleRef.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect     = toggleRef.current.getBoundingClientRect();
+    const maxOff   = (rect.width - 6) / 2;
+    const startOff = mode === 'investing' ? maxOff : 0;
+    pillDragData.current = { active: true, startX: e.clientX, startOffset: startOff, maxOffset: maxOff, currentOffset: startOff };
+    setPillDragOffset(startOff);
+  }
+
+  function handleTogglePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const d = pillDragData.current;
+    if (!d.active) return;
+    const newOff = Math.max(0, Math.min(d.maxOffset, d.startOffset + (e.clientX - d.startX)));
+    d.currentOffset = newOff;
+    setPillDragOffset(newOff);
+  }
+
+  function handleTogglePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    const d = pillDragData.current;
+    if (!d.active) return;
+    d.active = false;
+    const moved = Math.abs(e.clientX - d.startX);
+    let newMode: 'saving' | 'investing';
+    if (moved < 5 && toggleRef.current) {
+      // Tap: pick side based on where the tap landed
+      const rect = toggleRef.current.getBoundingClientRect();
+      newMode = (e.clientX - rect.left) > rect.width / 2 ? 'investing' : 'saving';
+    } else {
+      // Drag: snap to nearest side
+      newMode = d.currentOffset > d.maxOffset / 2 ? 'investing' : 'saving';
+    }
+    setPillDragOffset(null);
+    switchMode(newMode);
+  }
+
+  function handleTogglePointerCancel() {
+    pillDragData.current.active = false;
+    setPillDragOffset(null);
+  }
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) router.replace('/login');
@@ -703,8 +783,8 @@ export default function GoalsPage() {
         return {
           x:  Math.max(r * 1.34 + 6, Math.min(W - r * 1.34 - 6, x)),
           y:  Math.max(r * 1.34 + 6, Math.min(H - NAV_H - r * 1.34 - 6, y)),
-          vx: (Math.random() - 0.5) * 0.6,
-          vy: (Math.random() - 0.5) * 0.6,
+          vx: (Math.random() - 0.5) * 0.28,
+          vy: (Math.random() - 0.5) * 0.28,
           radius: r,
           isDragging: false,
           tapStartX: 0, tapStartY: 0,
@@ -738,8 +818,8 @@ export default function GoalsPage() {
         impulseRef.current = 0;
         for (const p of ps) {
           if (!p.isDragging) {
-            p.vx += (Math.random() - 0.5) * 0.35;
-            p.vy += (Math.random() - 0.5) * 0.35;
+            p.vx += (Math.random() - 0.5) * 0.16;
+            p.vy += (Math.random() - 0.5) * 0.16;
           }
         }
       }
@@ -885,8 +965,8 @@ export default function GoalsPage() {
       const p = physicsRef.current[i];
       if (!p?.isDragging) return;
       p.isDragging = false;
-      p.vx = p.lastVx * 1.2;
-      p.vy = p.lastVy * 1.2;
+      p.vx = p.lastVx * 0.75;
+      p.vy = p.lastVy * 0.75;
       const dx = e.clientX - p.tapStartX;
       const dy = e.clientY - p.tapStartY;
       if (Math.sqrt(dx * dx + dy * dy) < 10) {
@@ -955,95 +1035,154 @@ export default function GoalsPage() {
           </div>
         </div>
 
-        {/* ── Saving / Investing slider toggle ── */}
+        {/* ── Saving / Investing slider toggle — draggable pill ── */}
         <div className="mt-3 flex justify-center">
-          <div style={{
-            position: 'relative',
-            display: 'inline-flex',
-            backgroundColor: 'rgba(0,75,50,0.07)',
-            borderRadius: 24,
-            padding: 3,
-          }}>
-            {/* Sliding pill background */}
+          <div
+            ref={toggleRef}
+            onPointerDown={handleTogglePointerDown}
+            onPointerMove={handleTogglePointerMove}
+            onPointerUp={handleTogglePointerUp}
+            onPointerCancel={handleTogglePointerCancel}
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              backgroundColor: 'rgba(0,75,50,0.07)',
+              borderRadius: 24,
+              padding: 3,
+              cursor: 'grab',
+              touchAction: 'none',
+              userSelect: 'none',
+            }}
+          >
+            {/* Sliding pill — pixel-based during drag, percentage-based at rest */}
             <div style={{
               position: 'absolute',
-              top: 3, bottom: 3,
-              left: 3,
+              top: 3, bottom: 3, left: 3,
               width: 'calc(50% - 3px)',
               backgroundColor: '#004B32',
               borderRadius: 20,
-              transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
-              transform: mode === 'investing' ? 'translateX(100%)' : 'translateX(0)',
+              transform: pillDragOffset !== null
+                ? `translateX(${pillDragOffset}px)`
+                : mode === 'investing' ? 'translateX(100%)' : 'translateX(0)',
+              transition: pillDragOffset !== null ? 'none' : 'transform 0.65s cubic-bezier(0.34, 1.25, 0.64, 1)',
               boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+              pointerEvents: 'none',
             }} />
-            {(['saving', 'investing'] as const).map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                style={{
-                  position: 'relative',
-                  zIndex: 1,
-                  padding: '6px 18px',
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: mode === m ? '#ffffff' : 'rgba(0,75,50,0.45)',
-                  transition: 'color 0.22s ease',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  letterSpacing: '0.01em',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {m === 'saving' ? 'Goal Saving' : 'Goal Investing'}
-              </button>
-            ))}
+            {(['saving', 'investing'] as const).map(m => {
+              const isActive = pillDragOffset !== null
+                ? (m === 'saving' ? pillDragOffset <= (pillDragData.current.maxOffset / 2) : pillDragOffset > (pillDragData.current.maxOffset / 2))
+                : mode === m;
+              return (
+                <span
+                  key={m}
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    padding: '6px 18px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: isActive ? '#ffffff' : 'rgba(0,75,50,0.45)',
+                    transition: 'color 0.55s ease',
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {m === 'saving' ? 'Goal Saving' : 'Goal Investing'}
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Blob space — clip-path works with preserve-3d children unlike overflow:hidden */}
-      <div ref={containerRef} className="relative flex-1" style={{ touchAction: 'none', overflow: 'hidden', clipPath: 'inset(0)' }}>
-        {activeGoals.length === 0 && completedGoals.length === 0 && (
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-            <span className="text-5xl">🎯</span>
-            <p className="text-sm font-medium text-charcoal/45">No active goals yet. Tap + to set your first goal.</p>
+      {/* Blob space — outer div is the measurement + clip boundary */}
+      <div ref={containerRef} className="relative flex-1" style={{ overflow: 'hidden', clipPath: 'inset(0)' }}>
+
+        {/* ── Exit layer — frozen blobs sliding out ── */}
+        {exitBlobs.length > 0 && exitDir && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            pointerEvents: 'none',
+            animationName: `slide-out-to-${exitDir}`,
+            animationDuration: '0.62s',
+            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.6, 1)',
+            animationFillMode: 'forwards',
+          }}>
+            {exitBlobs.map(snap => (
+              <div key={snap.id} style={{
+                position: 'absolute',
+                left: snap.x - snap.r,
+                top:  snap.y - snap.r,
+                width:  snap.r * 2,
+                height: snap.r * 2,
+                backgroundColor: snap.bg,
+                borderRadius: '55% 45% 60% 40% / 50% 55% 45% 50%',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 4,
+                boxShadow: '0 6px 22px rgba(0,0,0,0.13), 0 2px 5px rgba(0,0,0,0.07)',
+              }}>
+                <span style={{ fontSize: snap.r * 0.30, lineHeight: 1 }}>{snap.emoji}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {allGoals.map((goal, i) => {
-          const isCompleted = !!goal.completedAt;
-          const r           = getRadius(goal.targetAmount, maxAmount);
-          const pos         = positions[i] ?? { x: r + 10, y: r + 30 };
-          const handlers    = makeHandlers(i, goal);
-          return (
-            <Bubble
-              key={goal.id}
-              goal={goal}
-              radius={r}
-              px={pos.x}
-              py={pos.y}
-              index={i}
-              isBursting={burstIds.has(goal.id)}
-              isCompleted={isCompleted}
-              isFlipped={flippedIds.has(goal.id)}
-              dm11={pos.dm11 ?? 0}
-              dm12={pos.dm12 ?? 0}
-              dm22={pos.dm22 ?? 0}
-              {...handlers}
-            />
-          );
-        })}
-
-        {msg && (
-          <div className="goal-complete-msg pointer-events-none absolute inset-x-0 top-1/3 px-8 text-center">
-            <div className="inline-block rounded-2xl bg-grounded-green px-6 py-4 shadow-card">
-              <p className="text-sm font-semibold text-white">🎉 {msg}</p>
+        {/* ── Active blobs layer — slides in from the opposite side ── */}
+        <div
+          key={slideKey}
+          style={{
+            position: 'absolute', inset: 0,
+            touchAction: 'none',
+            ...(slideEnterDir ? {
+              animationName: `slide-in-from-${slideEnterDir}`,
+              animationDuration: '0.62s',
+              animationTimingFunction: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+              animationFillMode: 'forwards',
+            } : {}),
+            pointerEvents: slideEnterDir ? 'none' : 'auto',
+          }}
+        >
+          {activeGoals.length === 0 && completedGoals.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
+              <span className="text-5xl">🎯</span>
+              <p className="text-sm font-medium text-charcoal/45">No active goals yet. Tap + to set your first goal.</p>
             </div>
-          </div>
-        )}
+          )}
+
+          {allGoals.map((goal, i) => {
+            const isCompleted = !!goal.completedAt;
+            const r           = getRadius(goal.targetAmount, maxAmount);
+            const pos         = positions[i] ?? { x: r + 10, y: r + 30 };
+            const handlers    = makeHandlers(i, goal);
+            return (
+              <Bubble
+                key={goal.id}
+                goal={goal}
+                radius={r}
+                px={pos.x}
+                py={pos.y}
+                index={i}
+                isBursting={burstIds.has(goal.id)}
+                isCompleted={isCompleted}
+                isFlipped={flippedIds.has(goal.id)}
+                dm11={pos.dm11 ?? 0}
+                dm12={pos.dm12 ?? 0}
+                dm22={pos.dm22 ?? 0}
+                {...handlers}
+              />
+            );
+          })}
+
+          {msg && (
+            <div className="goal-complete-msg pointer-events-none absolute inset-x-0 top-1/3 px-8 text-center">
+              <div className="inline-block rounded-2xl bg-grounded-green px-6 py-4 shadow-card">
+                <p className="text-sm font-semibold text-white">🎉 {msg}</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <BottomNav />
