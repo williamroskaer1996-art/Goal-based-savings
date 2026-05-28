@@ -3,9 +3,57 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import type { GoalIconKey } from '@/lib/types';
+import type { GoalIconKey, TriodosTransition } from '@/lib/types';
 import { ICON_TRANSITION, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { TriodosFund } from '@/lib/funds';
+
+// ── Transition modal content ──────────────────────────────────────────────────
+function getTransitionContent(key: TriodosTransition, goalName: string) {
+  const name = goalName.trim() || 'Your goal';
+  const map: Record<TriodosTransition, { body: string; bullets: string[] }> = {
+    energy: {
+      body: `"${name}" is part of a bigger shift — moving away from fossil fuels toward clean, renewable energy. Every home that generates its own power, reduces energy use, or upgrades its heating is a concrete step in that direction.`,
+      bullets: [
+        'Triodos finances solar parks, wind farms and battery storage across Europe',
+        'Loans for home insulation, heat pumps and electric mobility',
+        'Investment funds supporting the full energy transition infrastructure',
+      ],
+    },
+    food: {
+      body: `"${name}" connects to how we grow, produce and share food. Triodos believes the food system needs to become far more sustainable — better for the soil, for farmers, and for our long-term health.`,
+      bullets: [
+        'Financing organic farmers and regenerative agriculture projects',
+        'Supporting food producers shifting to sustainable practices',
+        'Investment funds focused on the transition from farm to fork',
+      ],
+    },
+    resources: {
+      body: `"${name}" fits into a world that uses materials more responsibly. Instead of take-make-waste, a circular economy keeps products and materials in use as long as possible — reducing impact at every step.`,
+      bullets: [
+        'Triodos funds companies building circular business models',
+        'Financing sustainable mobility and low-carbon transport',
+        'Supporting innovation in material reuse, repair and recycling',
+      ],
+    },
+    society: {
+      body: `"${name}" contributes to a fairer, more connected society. Triodos believes financial services should be accessible to everyone — and that money can actively strengthen communities and reduce inequality.`,
+      bullets: [
+        'Microfinance for entrepreneurs in underserved communities',
+        'Funding education, healthcare and social inclusion projects',
+        'Supporting cooperatives, community organisations and social enterprises',
+      ],
+    },
+    wellbeing: {
+      body: `"${name}" is an investment in yourself. Triodos supports a transition where wellbeing — physical, mental and social — is valued alongside economic growth, not sacrificed for it.`,
+      bullets: [
+        'Financing healthcare providers and preventive health initiatives',
+        'Supporting organisations focused on mental health and community care',
+        'Backing the shift toward a more balanced, human-centred economy',
+      ],
+    },
+  };
+  return map[key];
+}
 
 // ── Slider scale ──────────────────────────────────────────────────────────────
 // Linear 1–30 years. Each year is an equal fraction of the track.
@@ -73,6 +121,9 @@ export default function SetGoalPage() {
   const [goalTypeChoice, setGoalTypeChoice] = useState<'saving' | 'investing'>(() =>
     existingGoal?.goalType ?? 'saving',
   );
+
+  // ── Transition modal ─────────────────────────────────────────────────────
+  const [showTransitionModal, setShowTransitionModal] = useState(false);
 
   // ── Recommendation state ─────────────────────────────────────────────────
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
@@ -226,12 +277,18 @@ export default function SetGoalPage() {
             className="mt-2 overflow-hidden transition-all duration-300"
             style={{ maxHeight: showTransition ? '32px' : '0px', opacity: showTransition ? 1 : 0 }}
           >
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+            <button
+              type="button"
+              onClick={() => setShowTransitionModal(true)}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity active:opacity-70"
               style={{ background: transitionInfo.bgColor, color: transitionInfo.color }}
             >
               {transitionInfo.emoji}&nbsp;{transitionInfo.label} transition
-            </span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden className="ml-0.5 opacity-60">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                <path d="M12 8v1m0 3v4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -318,30 +375,24 @@ export default function SetGoalPage() {
             />
           </div>
 
-          {/* Tick marks at mathematically exact positions */}
+          {/* Tick marks at every 5-year mark */}
           <div className="relative mt-1 h-1.5">
-            {/* 5y  = (5-1)/(30-1)*100 = 13.79% */}
-            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/20"
-              style={{ left: `${yearToPct(5).toFixed(2)}%` }} />
-            {/* 10y = (10-1)/(30-1)*100 = 31.03% */}
-            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/12"
-              style={{ left: `${yearToPct(10).toFixed(2)}%` }} />
-            {/* 20y = (20-1)/(30-1)*100 = 65.52% */}
-            <div className="absolute top-0 h-full w-px rounded-full bg-charcoal/12"
-              style={{ left: `${yearToPct(20).toFixed(2)}%` }} />
+            {[5, 10, 15, 20, 25].map((y) => (
+              <div key={y} className="absolute top-0 h-full w-px rounded-full bg-charcoal/20"
+                style={{ left: `${yearToPct(y).toFixed(2)}%` }} />
+            ))}
           </div>
 
-          {/* Scale labels at exact linear positions */}
+          {/* Scale labels: 1y, 5y, 10y, 15y, 20y, 25y, 30y */}
           <div className="relative mt-0.5 h-4 select-none text-[10px] font-medium text-charcoal/35">
             <span className="absolute left-0">1y</span>
-            <span
-              className="absolute -translate-x-1/2 font-semibold"
-              style={{ left: `${yearToPct(5).toFixed(2)}%`, color: `${accentColor}80`, transition: 'color 0.4s' }}
-            >5y</span>
-            <span className="absolute -translate-x-1/2"
-              style={{ left: `${yearToPct(10).toFixed(2)}%` }}>10y</span>
-            <span className="absolute -translate-x-1/2"
-              style={{ left: `${yearToPct(20).toFixed(2)}%` }}>20y</span>
+            {[5, 10, 15, 20, 25].map((y) => (
+              <span
+                key={y}
+                className="absolute -translate-x-1/2"
+                style={{ left: `${yearToPct(y).toFixed(2)}%` }}
+              >{y}y</span>
+            ))}
             <span className="absolute right-0">30y</span>
           </div>
         </div>
@@ -449,6 +500,72 @@ export default function SetGoalPage() {
         </div>
 
       </div>
+
+      {/* ── Transition theme modal (bottom sheet) ── */}
+      {showTransitionModal && (() => {
+        const content = getTransitionContent(transitionKey, name);
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+              onClick={() => setShowTransitionModal(false)}
+            />
+            {/* Sheet */}
+            <div
+              className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-3xl bg-white px-6 pb-10 pt-5 shadow-2xl"
+              style={{ animation: 'sheet-up 0.32s cubic-bezier(0.22,1,0.36,1) forwards' }}
+            >
+              {/* Drag handle */}
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-charcoal/15" />
+
+              {/* Theme header */}
+              <div className="mb-4 flex items-center gap-3">
+                <span
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl text-xl"
+                  style={{ background: transitionInfo.bgColor, color: transitionInfo.color }}
+                >
+                  {transitionInfo.emoji}
+                </span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal/40">Triodos transition</p>
+                  <p className="font-display text-lg font-bold leading-tight text-charcoal" style={{ fontWeight: 700 }}>
+                    {transitionInfo.label}
+                  </p>
+                </div>
+              </div>
+
+              {/* Personalised body */}
+              <p className="mb-5 text-sm leading-relaxed text-charcoal/70">
+                {content.body}
+              </p>
+
+              {/* Bullets */}
+              <div className="mb-6 space-y-2.5">
+                {content.bullets.map((b) => (
+                  <div key={b} className="flex items-start gap-2.5">
+                    <span
+                      className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold"
+                      style={{ background: transitionInfo.bgColor, color: transitionInfo.color }}
+                    >✓</span>
+                    <p className="text-sm leading-snug text-charcoal/65">{b}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Close */}
+              <button
+                type="button"
+                onClick={() => setShowTransitionModal(false)}
+                className="w-full rounded-xl py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]"
+                style={{ backgroundColor: transitionInfo.color }}
+              >
+                Got it
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Sticky CTA ── */}
       <div className="fixed bottom-0 left-1/2 w-full max-w-md -translate-x-1/2 bg-gradient-to-t from-birch-skin via-birch-skin/95 to-birch-skin/0 px-5 pb-8 pt-6">

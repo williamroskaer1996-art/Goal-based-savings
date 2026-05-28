@@ -134,6 +134,12 @@ input[type='number'] {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Bottom sheet slide-up */
+@keyframes sheet-up {
+  from { transform: translateX(-50%) translateY(100%); }
+  to   { transform: translateX(-50%) translateY(0); }
+}
+
 /* Wrapped — slide entrance */
 @keyframes wrapped-enter {
   from { opacity: 0; transform: translateY(18px) scale(0.97); }
