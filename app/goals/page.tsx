@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import { GOAL_ICONS, TRIODOS_TRANSITIONS, PARTNERSHIPS } from '@/lib/types';
+import { GOAL_ICONS, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { GoalAccount, GoalIconKey, TriodosTransition } from '@/lib/types';
 import { BottomNav } from '@/components/BottomNav';
 import { TriodosLogo } from '@/components/TriodosLogo';
@@ -23,10 +23,6 @@ function GoalSheet({
   const tr          = goal.transition ? TRIODOS_TRANSITIONS[goal.transition] : null;
   const pct         = goal.targetAmount > 0 ? Math.min(1, goal.balance / goal.targetAmount) : 0;
   const isCompleted = !!goal.completedAt;
-  // Only show a voucher if this goal was explicitly set up through the partnerships feature
-  const partnership = goal.partnershipId
-    ? (PARTNERSHIPS.find(p => p.id === goal.partnershipId) ?? null)
-    : null;
 
   const [tab,       setTab]       = useState<'once' | 'monthly'>('once');
   const [amount,    setAmount]    = useState('');
@@ -228,78 +224,15 @@ function GoalSheet({
         <div className="mb-4 border-t border-grounded-green/8" />
 
         {isCompleted ? (
-          /* ── Completed: show voucher instead of deposit form ── */
-          <>
-            {/* Celebration banner */}
-            <div className="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3"
-              style={{ backgroundColor: '#DFFF5740', border: '1.5px solid #DFFF57' }}>
-              <span className="text-xl">🎉</span>
-              <div>
-                <p className="text-sm font-bold text-grounded-green">Goal reached!</p>
-                <p className="text-xs text-charcoal/55 mt-0.5">
-                  {partnership
-                    ? 'Your exclusive discount is ready to collect.'
-                    : 'You’ve successfully saved for this goal.'}
-                </p>
-              </div>
+          /* ── Completed ── */
+          <div className="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3"
+            style={{ backgroundColor: '#DFFF5740', border: '1.5px solid #DFFF57' }}>
+            <span className="text-xl">🎉</span>
+            <div>
+              <p className="text-sm font-bold text-grounded-green">Goal reached!</p>
+              <p className="text-xs text-charcoal/55 mt-0.5">You&apos;ve successfully saved for this goal.</p>
             </div>
-
-            {partnership ? (
-              <>
-                <p className="mb-2 text-sm font-semibold text-charcoal/70">Your reward</p>
-
-                {/* Voucher card */}
-                <div className="mb-4 overflow-hidden rounded-2xl border-2 border-dashed border-grounded-green/25 bg-white">
-                  {/* Partner header */}
-                  <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-grounded-green/6 text-2xl">
-                      {partnership.emoji}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-charcoal">{partnership.name}</p>
-                      <p className="text-xs text-charcoal/50">{partnership.tagline}</p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-grounded-green px-3 py-1.5 text-xs font-bold text-white">
-                      {partnership.discount}
-                    </span>
-                  </div>
-
-                  {/* Dashed ticket divider with notch circles */}
-                  <div className="relative flex items-center">
-                    <div className="-ml-3 h-5 w-5 shrink-0 rounded-full bg-[#F3EDE4]" />
-                    <div className="flex-1 border-t border-dashed border-charcoal/15" />
-                    <div className="-mr-3 h-5 w-5 shrink-0 rounded-full bg-[#F3EDE4]" />
-                  </div>
-
-                  {/* Description + Triodos verified */}
-                  <div className="px-4 pt-3 pb-4">
-                    <p className="text-xs leading-relaxed text-charcoal/55">{partnership.description}</p>
-                    <div className="mt-2.5 flex items-center gap-1.5">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                          stroke="#004B32" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      <span className="text-[10px] font-semibold text-grounded-green">Triodos verified partner</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full rounded-xl bg-grounded-green py-4 text-base font-semibold text-white shadow-card transition hover:bg-grounded-green/90 active:scale-[0.99]"
-                >
-                  Claim {partnership.discount} discount →
-                </button>
-              </>
-            ) : (
-              /* No partnership — simple completion message, no voucher */
-              <div className="rounded-2xl border border-charcoal/10 bg-white px-4 py-4">
-                <p className="text-sm leading-relaxed text-charcoal/60">
-                  Well done! You&apos;ve reached your savings target. Ready to make it happen?
-                </p>
-              </div>
-            )}
-          </>
+          </div>
         ) : (
           /* ── Not completed: tab switcher + deposit / monthly forms ── */
           <>
