@@ -98,101 +98,6 @@ export const ICON_TRANSITION: Record<GoalIconKey, TriodosTransition> = {
   other:     'society',   // default
 };
 
-// ── Partnerships ──────────────────────────────────────────────────────────────
-export type Partnership = {
-  id: string;
-  name: string;
-  tagline: string;
-  discount: string;
-  description: string;
-  emoji: string;
-  categories: GoalIconKey[];
-  transition: TriodosTransition;
-  suggested: {
-    goalName: string;
-    amount: number;
-    purpose: string;
-  };
-};
-
-export const PARTNERSHIPS: Partnership[] = [
-  {
-    id: 'solarnl',
-    name: 'SolarCity NL',
-    tagline: 'Solar panels & installation',
-    discount: '8% off',
-    description: 'Get 8% off a full solar panel installation when you reach your savings goal. Triodos verified sustainable supplier.',
-    emoji: '☀️',
-    categories: ['home', 'garden', 'tools'],
-    transition: 'energy',
-    suggested: {
-      goalName: 'Solar panels',
-      amount: 8000,
-      purpose: 'Become energy independent at home',
-    },
-  },
-  {
-    id: 'babbel',
-    name: 'Babbel',
-    tagline: 'Online language courses',
-    discount: '20% off',
-    description: '20% off any Babbel subscription — English, Spanish, German and 12 more languages. Learn at your own pace.',
-    emoji: '🗣️',
-    categories: ['education', 'travel', 'holiday'],
-    transition: 'society',
-    suggested: {
-      goalName: 'Language course',
-      amount: 150,
-      purpose: 'Learn a new language and connect with more people',
-    },
-  },
-  {
-    id: 'gazelle',
-    name: 'Gazelle E-bikes',
-    tagline: 'Dutch electric bikes',
-    discount: '10% off + free helmet',
-    description: '10% off your Gazelle e-bike and a free helmet (€89 value). Use your goal savings directly in-store.',
-    emoji: '⚡',
-    categories: ['bike', 'travel'],
-    transition: 'resources',
-    suggested: {
-      goalName: 'Gazelle e-bike',
-      amount: 2500,
-      purpose: 'Get around sustainably without a car',
-    },
-  },
-  {
-    id: 'fairphone',
-    name: 'Fairphone',
-    tagline: 'Ethical & repairable smartphones',
-    discount: '15% off',
-    description: '15% off any Fairphone smartphone. Built to last, easy to repair, and made with fair materials — the sustainable choice in tech.',
-    emoji: '📱',
-    categories: ['tools', 'other', 'education'],
-    transition: 'resources',
-    suggested: {
-      goalName: 'Fairphone',
-      amount: 600,
-      purpose: 'Replace my phone with a sustainable, repairable alternative',
-    },
-  },
-  {
-    id: 'patagonia',
-    name: 'Patagonia',
-    tagline: 'Sustainable outdoor clothing',
-    discount: '20% off',
-    description: '20% off Patagonia winter jackets and outerwear. Made to last, repaired for free, and 1% of revenue goes to environmental causes.',
-    emoji: '🧥',
-    categories: ['holiday', 'travel', 'health', 'other'],
-    transition: 'wellbeing',
-    suggested: {
-      goalName: 'Winter jacket',
-      amount: 350,
-      purpose: 'Invest in quality outerwear that lasts for years',
-    },
-  },
-];
-
 export type GoalAccount = {
   id: string;
   name: string;
@@ -202,7 +107,6 @@ export type GoalAccount = {
   parentAccountId: string;
   purpose?: string;
   transition?: TriodosTransition;
-  partnershipId?: string;
   completedAt?: string;
   monthlyDeposit?: number;
   goalType: 'saving' | 'investing';

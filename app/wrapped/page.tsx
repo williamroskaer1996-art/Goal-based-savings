@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import { GOAL_ICONS, TRIODOS_TRANSITIONS, PARTNERSHIPS } from '@/lib/types';
+import { GOAL_ICONS, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { GoalAccount, TriodosTransition } from '@/lib/types';
 
 // ── Real-world Triodos impact ──────────────────────────────────────────────────
@@ -62,7 +62,6 @@ type Slide =
   | { type: 'saved';       totalSaved: number; totalTarget: number }
   | { type: 'completed';   goals: GoalAccount[] }
   | { type: 'transition';  transition: TriodosTransition; goals: GoalAccount[] }
-  | { type: 'partnerships'; goals: GoalAccount[] }
   | { type: 'outro';       completedCount: number; totalSaved: number };
 
 const SHADOW = '0 2px 12px rgba(0,0,0,0.55)';
@@ -262,47 +261,6 @@ function SlideTransition({ transition, goals }: { transition: TriodosTransition;
   );
 }
 
-function SlidePartnerships({ goals }: { goals: GoalAccount[] }) {
-  const items = goals
-    .map(g => ({ goal: g, partnership: PARTNERSHIPS.find(p => p.id === g.partnershipId) }))
-    .filter((x): x is { goal: GoalAccount; partnership: typeof PARTNERSHIPS[0] } => !!x.partnership);
-
-  const count = useCountUp(items.length, 400);
-
-  return (
-    <div className="relative flex h-full flex-col justify-between px-8 pb-16 pt-24">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[65%]"
-        style={{ background: 'linear-gradient(to top, rgba(140,50,0,0.75) 0%, transparent 100%)' }} />
-
-      <p className="relative text-xs font-bold uppercase tracking-[0.18em] text-white/70"
-        style={{ textShadow: SHADOW }}>Rewards unlocked</p>
-
-      <div className="relative">
-        <p className="font-display text-[80px] font-black leading-none text-white"
-          style={{ textShadow: SHADOW_LG }}>{count}</p>
-        <p className="mt-1 text-[26px] font-bold text-white" style={{ textShadow: SHADOW }}>
-          exclusive {items.length === 1 ? 'discount' : 'discounts'}<br />earned this year
-        </p>
-      </div>
-
-      <div className="relative flex flex-col gap-3">
-        {items.map(({ goal, partnership }) => (
-          <div key={goal.id} className="flex items-center gap-3 rounded-2xl px-4 py-3"
-            style={{ background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(10px)' }}>
-            <span className="text-2xl">{partnership.emoji}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">{partnership.name}</p>
-              <p className="text-xs text-white/55">{goal.name}</p>
-            </div>
-            <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-bold"
-              style={{ color: '#B04500' }}>{partnership.discount}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function SlideOutro({
   completedCount, totalSaved, onClose,
 }: { completedCount: number; totalSaved: number; onClose: () => void }) {
@@ -366,8 +324,6 @@ export default function WrappedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goals]);
 
-  const partnershipGoals = completedGoals.filter(g => !!g.partnershipId);
-
   const slides = useMemo((): Slide[] => {
     const list: Slide[] = [{ type: 'welcome', ownerName }];
     if (allGoals.length > 0) {
@@ -378,7 +334,6 @@ export default function WrappedPage() {
     for (const [transition, tGoals] of byTransition) {
       list.push({ type: 'transition', transition, goals: tGoals });
     }
-    if (partnershipGoals.length > 0) list.push({ type: 'partnerships', goals: partnershipGoals });
     list.push({ type: 'outro', completedCount: completedGoals.length, totalSaved });
     return list;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -420,7 +375,6 @@ export default function WrappedPage() {
         {slide.type === 'saved'        && <SlideSaved {...slide} />}
         {slide.type === 'completed'    && <SlideCompleted {...slide} />}
         {slide.type === 'transition'   && <SlideTransition {...slide} />}
-        {slide.type === 'partnerships' && <SlidePartnerships {...slide} />}
         {slide.type === 'outro'        && <SlideOutro {...slide} onClose={() => router.back()} />}
       </div>
 
