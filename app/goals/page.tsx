@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAppStore } from '@/lib/store';
 import { GOAL_ICONS, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { GoalAccount, GoalIconKey, TriodosTransition } from '@/lib/types';
@@ -186,7 +187,7 @@ function GoalSheet({
                     : 'border-charcoal/10 bg-white hover:bg-charcoal/5'
                 }`}
               >
-                <img src="/triodos-mark.svg" alt="Triodos" width={18} height={18} />
+                <Image src="/triodos-mark.svg" alt="Triodos" width={18} height={18} />
               </button>
             </div>
 

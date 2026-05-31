@@ -1,9 +1,11 @@
+import Image from 'next/image';
+
 type Props = { className?: string };
 
 export function TriodosLogo({ className }: Props) {
   return (
     <div className={`flex items-center ${className ?? ''}`}>
-      <img
+      <Image
         src="/triodos-mark.svg"
         alt="Triodos Bank"
         width={32}

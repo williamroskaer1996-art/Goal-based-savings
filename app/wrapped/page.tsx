@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAppStore } from '@/lib/store';
 import { GOAL_ICONS, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { GoalAccount, TriodosTransition } from '@/lib/types';
@@ -359,11 +360,11 @@ export default function WrappedPage() {
       style={{ zIndex: 50, cursor: 'pointer', touchAction: 'manipulation' }}
     >
       {/* Full-bleed photo — no overlay, fills edge to edge */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src="/wrapped-bg.jpg"
         alt=""
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        fill
+        className="pointer-events-none object-cover"
         style={{ objectPosition: 'center 15%' }}
         aria-hidden
       />
