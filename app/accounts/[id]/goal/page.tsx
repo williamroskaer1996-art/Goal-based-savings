@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+
+export function generateStaticParams() {
+  return [{ id: 'savings-1' }, { id: 'checking-1' }];
+}
 import { useAppStore } from '@/lib/store';
 import type { GoalIconKey, TriodosTransition } from '@/lib/types';
 import { ICON_TRANSITION, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { TriodosFund } from '@/lib/funds';
+import { recommendFundByKeyword } from '@/lib/funds';
 
 // ── Transition modal content ──────────────────────────────────────────────────
 function getTransitionContent(
@@ -197,27 +202,15 @@ export default function SetGoalPage() {
 
     setLoadingRec(true);
 
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/recommend-fund', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            goalName:         name.trim(),
-            purpose:          purpose.trim() || undefined,
-            timeHorizonMonths,
-            amount:           parseFloat(amount) || undefined,
-          }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setRecommendation(await res.json());
-      } catch (err) {
-        console.error('[recommend-fund]', err);
-        setRecommendation(null);
-      } finally {
-        setLoadingRec(false);
-      }
-    }, 750);
+    debounceRef.current = setTimeout(() => {
+      const fund  = recommendFundByKeyword(name.trim(), purpose.trim(), timeHorizonMonths);
+      const years = Math.round(timeHorizonMonths / 12);
+      setRecommendation({
+        fund,
+        reason: `Given your ${years}-year horizon and goal "${name.trim()}", ${fund.name} is a strong match. It focuses on ${fund.focus.toLowerCase()} and suits your timeline well.`,
+      });
+      setLoadingRec(false);
+    }, 400);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps

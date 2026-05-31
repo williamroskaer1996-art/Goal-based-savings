@@ -1,6 +1,10 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+
+export function generateStaticParams() {
+  return [{ id: 'savings-1' }, { id: 'checking-1' }];
+}
 import { useMemo, useState, Suspense } from 'react';
 import { TRIODOS_FUNDS } from '@/lib/funds';
 import type { RiskLevel } from '@/lib/funds';

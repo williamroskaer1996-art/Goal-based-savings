@@ -2,14 +2,14 @@
   "name": "Triodos Goal Advisor",
   "short_name": "Triodos",
   "description": "Set and track your savings goals with Triodos Bank",
-  "start_url": "/login",
+  "start_url": "/Goal-based-savings/login/",
   "display": "standalone",
   "background_color": "#F3EDE4",
   "theme_color": "#004B32",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/triodos-mark.svg",
+      "src": "/Goal-based-savings/triodos-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
