@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { GOAL_ICONS, TRIODOS_TRANSITIONS } from '@/lib/types';
 import type { GoalAccount, GoalIconKey, TriodosTransition } from '@/lib/types';
+
+// Re-derive icon from name so stale stored iconKeys stay correct
+function resolveIconKey(goal: GoalAccount): GoalIconKey {
+  const s = goal.name.toLowerCase();
+  if (/car|vehicle|\bev\b|electric[.\s]car|electric[.\s]vehicle|tesla/.test(s)) return 'car';
+  if (/e-bike|ebike|cargo[.\s]bike|bicycle|bike/.test(s))                       return 'bike';
+  return goal.iconKey;
+}
 import { BottomNav } from '@/components/BottomNav';
 import { TriodosLogo } from '@/components/TriodosLogo';
 
@@ -19,7 +27,7 @@ function GoalSheet({
   onEdit: () => void;
   onClose: () => void;
 }) {
-  const icon        = GOAL_ICONS[goal.iconKey];
+  const icon        = GOAL_ICONS[resolveIconKey(goal)];
   const tr          = goal.transition ? TRIODOS_TRANSITIONS[goal.transition] : null;
   const pct         = goal.targetAmount > 0 ? Math.min(1, goal.balance / goal.targetAmount) : 0;
   const isCompleted = !!goal.completedAt;
@@ -411,7 +419,7 @@ function Bubble({
   onUp:   (e: React.PointerEvent) => void;
   onFlipTransition: () => void;
 }) {
-  const icon = GOAL_ICONS[goal.iconKey];
+  const icon = GOAL_ICONS[resolveIconKey(goal)];
   const tr   = goal.transition ? TRIODOS_TRANSITIONS[goal.transition] : null;
 
   const bg = isCompleted
@@ -612,7 +620,7 @@ export default function GoalsPage() {
       if (!pos) return [];
       const r  = getRadius(g.targetAmount, maxAmount);
       const bg = g.completedAt ? '#DFFF57' : (g.transition ? TRANSITION_BG[g.transition] : '#004B32');
-      return [{ id: g.id, x: pos.x, y: pos.y, r, bg, emoji: GOAL_ICONS[g.iconKey].emoji }];
+      return [{ id: g.id, x: pos.x, y: pos.y, r, bg, emoji: GOAL_ICONS[resolveIconKey(g)].emoji }];
     });
 
     const dir = newMode === 'investing' ? 'left' : 'right';
@@ -1079,7 +1087,6 @@ export default function GoalsPage() {
         >
           {activeGoals.length === 0 && completedGoals.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-              <span className="text-5xl">🎯</span>
               <p className="text-sm font-medium text-charcoal/45">No active goals yet. Tap + to set your first goal.</p>
             </div>
           )}

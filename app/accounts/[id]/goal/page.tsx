@@ -83,9 +83,9 @@ const INVEST_THRESHOLD = 5; // years
 // ── Goal name → icon ──────────────────────────────────────────────────────────
 function categorizeGoal(n: string): GoalIconKey {
   const s = n.toLowerCase();
-  if (/solar|panel|insul|heat|wind|electric|energy|roof/.test(s))     return 'home';
-  if (/e-bike|ebike|cargo.bike|bicycle|bike/.test(s))                 return 'bike';
-  if (/car|vehicle|ev |electric.car|tesla/.test(s))                   return 'car';
+  if (/car|vehicle|\bev\b|electric.car|electric.vehicle|tesla/.test(s)) return 'car';
+  if (/e-bike|ebike|cargo.bike|bicycle|bike/.test(s))                  return 'bike';
+  if (/solar|panel|insul|heat|wind|electric|energy|roof/.test(s))      return 'home';
   if (/garden|plant|veggie|vegetable|grow|farm|organic/.test(s))      return 'garden';
   if (/train|trip|travel|inter.?rail|journey|europe/.test(s))         return 'train';
   if (/holiday|vacation|ski|beach|resort|abroad/.test(s))             return 'holiday';
@@ -165,6 +165,22 @@ export default function SetGoalPage() {
     }
   }, [existingGoal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Restore draft when returning from fund projection page ───────────────
+  useEffect(() => {
+    if (existingGoal) return; // editing mode uses its own pre-fill
+    const saved = sessionStorage.getItem('triodos_goal_draft');
+    if (!saved) return;
+    try {
+      const d = JSON.parse(saved);
+      if (d.name      !== undefined) setName(d.name);
+      if (d.amount    !== undefined) setAmount(d.amount);
+      if (d.purpose   !== undefined) setPurpose(d.purpose);
+      if (d.sliderYears !== undefined) setSliderYears(d.sliderYears);
+      if (d.goalTypeChoice !== undefined) setGoalTypeChoice(d.goalTypeChoice);
+    } catch { /* ignore corrupt draft */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (isInitialized && !isAuthenticated) router.replace('/login');
   }, [isInitialized, isAuthenticated, router]);
@@ -210,6 +226,7 @@ export default function SetGoalPage() {
   // ── Save ─────────────────────────────────────────────────────────────────
   function handleSave() {
     if (!name.trim()) return;
+    sessionStorage.removeItem('triodos_goal_draft');
     const resolvedIcon: GoalIconKey =
       existingGoal?.iconKey !== 'other' && existingGoal?.iconKey
         ? existingGoal.iconKey
@@ -301,8 +318,7 @@ export default function SetGoalPage() {
         {/* ── Amount ── */}
         <div>
           <label className="mb-2 block text-sm font-semibold text-charcoal/65" htmlFor="goal-amount">
-            Target amount{' '}
-            <span className="font-normal text-charcoal/35">(optional)</span>
+            Target amount
           </label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-charcoal/40">€</span>
@@ -322,8 +338,7 @@ export default function SetGoalPage() {
         {/* ── Purpose ── */}
         <div>
           <label className="mb-2 block text-sm font-semibold text-charcoal/65" htmlFor="goal-purpose">
-            What is it for?{' '}
-            <span className="font-normal text-charcoal/35">(optional)</span>
+            What is your dream?
           </label>
           <input
             id="goal-purpose"
@@ -488,19 +503,44 @@ export default function SetGoalPage() {
               </div>
             )}
 
-            {/* Result */}
+            {/* Result — tappable card */}
             {recommendation && !loadingRec && (
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 text-2xl leading-none">{recommendation.fund.emoji}</span>
-                <div className="min-w-0">
-                  <p className="font-display font-bold leading-snug text-grounded-green" style={{ fontWeight: 700 }}>
-                    {recommendation.fund.name}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-charcoal/55">
-                    {recommendation.reason}
-                  </p>
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem('triodos_goal_draft', JSON.stringify({
+                    name, amount, purpose, sliderYears, goalTypeChoice,
+                  }));
+                  router.push(
+                    `/accounts/${id}/goal/fund?fundId=${recommendation.fund.id}` +
+                    `&goalName=${encodeURIComponent(name)}` +
+                    `&years=${sliderYears}` +
+                    (amount ? `&amount=${amount}` : ''),
+                  );
+                }}
+                className="w-full text-left transition active:scale-[0.99]"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 text-2xl leading-none">{recommendation.fund.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-bold leading-snug" style={{ color: '#8074FF', fontWeight: 700 }}>
+                      {recommendation.fund.name}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-charcoal/55">
+                      {recommendation.reason}
+                    </p>
+                  </div>
+                  {/* Chevron */}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden
+                    className="mt-1 shrink-0 opacity-40">
+                    <path d="M9 18l6-6-6-6" stroke="#8074FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
-              </div>
+                {/* View projection link */}
+                <p className="mt-3 text-xs font-semibold" style={{ color: '#8074FF' }}>
+                  View growth projection →
+                </p>
+              </button>
             )}
           </div>
         </div>

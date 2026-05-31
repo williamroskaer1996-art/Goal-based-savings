@@ -13,7 +13,7 @@ import type { Account, GoalAccount } from './types';
 import { INITIAL_ACCOUNTS, INITIAL_GOALS } from './mockData';
 
 // Bump this string whenever INITIAL_GOALS changes — forces a reset in all browsers.
-const DATA_VERSION = 'v6';
+const DATA_VERSION = 'v9';
 
 type AppStoreValue = {
   isInitialized: boolean;
