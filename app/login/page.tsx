@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { TriodosLogo } from '@/components/TriodosLogo';
 import { PinPad } from '@/components/PinPad';
 import { useAppStore } from '@/lib/store';
@@ -9,7 +8,6 @@ import { useAppStore } from '@/lib/store';
 type FaceIdState = 'idle' | 'scanning' | 'success';
 
 export default function LoginPage() {
-  const router = useRouter();
   const { login } = useAppStore();
   const [pin, setPin]             = useState('');
   const [shake, setShake]         = useState(false);
@@ -21,21 +19,26 @@ export default function LoginPage() {
     sessionStorage.removeItem('triodos_auth');
   }, []);
 
+  const goHome = () => {
+    login();
+    // Use hard navigation so iOS PWA stays in standalone mode
+    const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+    window.location.replace(`${base}/home/`);
+  };
+
   // PIN login
   useEffect(() => {
     if (pin.length === 4) {
-      login();
-      router.push('/home');
+      goHome();
     }
-  }, [pin, login, router]);
+  }, [pin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function triggerFaceId() {
     setFaceId('scanning');
     setTimeout(() => {
       setFaceId('success');
       setTimeout(() => {
-        login();
-        router.push('/home');
+        goHome();
       }, 700);
     }, 1500);
   }
