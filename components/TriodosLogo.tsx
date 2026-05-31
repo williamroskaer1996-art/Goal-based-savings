@@ -1,17 +1,20 @@
-import Image from 'next/image';
+type Props = { className?: string; size?: number };
 
-type Props = { className?: string };
-
-export function TriodosLogo({ className }: Props) {
+export function TriodosLogo({ className, size = 32 }: Props) {
   return (
     <div className={`flex items-center ${className ?? ''}`}>
-      <Image
-        src="/triodos-mark.svg"
-        alt="Triodos Bank"
-        width={32}
-        height={32}
-        className="shrink-0"
-      />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 500 500"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-label="Triodos Bank"
+        role="img"
+      >
+        <path fill="#8074FF" d="M95.35,123.68c84.48,23.74,173.25,3.94,238.24-54.88,5.73-5.19,14.71-14.64,15.8-22.41,2.02-14.47-16.04-25.26-27.44-30.05-68.5-28.75-173.14-7.61-227.76,41.88-25.19,22.83-44.99,52.49,1.16,65.45Z"/>
+        <path fill="#004B32" d="M481.09,161.3c-15.13-34.23-43.5-79.4-86.44-75.21-30.92,3.02-99.94,50.17-121.04,73.51-31.32,34.64-33.35,81.33-35.81,125.75-2.34,42.14-4.68,89.03-4.01,131.05.89,55.35,6.99,89.04,73.25,78.25,98.56-16.05,176.11-108.42,190.33-205.16,6.34-43.12,1.31-88.37-16.28-128.18Z"/>
+        <path fill="#98D39A" d="M114.24,156.8c-67.63-10.33-102.98-1.32-112.81,73.09-12.06,91.3,53.6,220.45,146.05,246.29,33.58,9.39,44.43-6.59,49.62-31.29,1.89-9,2.85-18.18,3.02-27.38,1.04-56.85,7.62-115.25,5.55-171.73-2.55-69.4-24.9-78.82-91.43-88.99Z"/>
+      </svg>
     </div>
   );
 }
