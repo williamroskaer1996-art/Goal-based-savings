@@ -14,6 +14,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Triodos Bank',
   description: 'Banking with purpose. Triodos Bank.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Triodos',
+  },
 };
 
 export const viewport: Viewport = {
