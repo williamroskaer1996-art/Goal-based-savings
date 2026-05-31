@@ -11,14 +11,19 @@ const inter = Inter({
   display: 'swap',
 });
 
+const basePath = process.env.GITHUB_PAGES === 'true' ? '/Goal-based-savings' : '';
+
 export const metadata: Metadata = {
   title: 'Triodos Bank',
   description: 'Banking with purpose. Triodos Bank.',
-  manifest: '/manifest.json',
+  manifest: `${basePath}/manifest.json`,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Triodos',
+  },
+  icons: {
+    apple: `${basePath}/apple-touch-icon.png`,
   },
 };
 
