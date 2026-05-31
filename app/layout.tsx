@@ -56,8 +56,7 @@ export default function RootLayout({
       <body className="bg-birch-skin text-charcoal antialiased">
         <ErrorBoundary>
           <AppStoreProvider>
-            {/* pt-[54px] clears the status bar / Dynamic Island in the mockup iframe */}
-            <div className="mx-auto min-h-dvh w-full max-w-md bg-birch-skin pt-[54px]">
+            <div className="mx-auto min-h-dvh w-full max-w-md bg-birch-skin">
               {children}
             </div>
           </AppStoreProvider>

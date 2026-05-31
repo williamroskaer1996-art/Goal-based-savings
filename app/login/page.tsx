@@ -47,7 +47,7 @@ export default function LoginPage() {
   const isSuccess  = faceId === 'success';
 
   return (
-    <main className="flex min-h-dvh flex-col items-center px-8 pb-10 pt-16">
+    <main className="flex h-dvh flex-col items-center overflow-hidden px-8 pb-10 pt-10">
       {/* Logo + greeting */}
       <div className="flex flex-col items-center gap-6">
         <TriodosLogo />
