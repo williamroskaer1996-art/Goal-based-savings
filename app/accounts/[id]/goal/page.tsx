@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 
-export function generateStaticParams() {
-  return [{ id: 'savings-1' }, { id: 'checking-1' }];
-}
 import { useAppStore } from '@/lib/store';
 import type { GoalIconKey, TriodosTransition } from '@/lib/types';
 import { ICON_TRANSITION, TRIODOS_TRANSITIONS } from '@/lib/types';
@@ -106,7 +103,7 @@ function categorizeGoal(n: string): GoalIconKey {
 type Recommendation = { fund: TriodosFund; reason: string };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function SetGoalPage() {
+function SetGoalContent() {
   const router       = useRouter();
   const params       = useParams();
   const searchParams = useSearchParams();
@@ -619,5 +616,13 @@ export default function SetGoalPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function SetGoalPage() {
+  return (
+    <Suspense fallback={null}>
+      <SetGoalContent />
+    </Suspense>
   );
 }

@@ -3,9 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
-export function generateStaticParams() {
-  return [{ id: 'savings-1' }, { id: 'checking-1' }];
-}
 import { BackButton } from '@/components/BackButton';
 import { BottomNav } from '@/components/BottomNav';
 import { useAppStore } from '@/lib/store';
