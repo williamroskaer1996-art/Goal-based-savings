@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   manifest: `${basePath}/manifest.json`,
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Triodos',
   },
   icons: {
@@ -32,6 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   themeColor: '#F3EDE4',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -56,7 +57,7 @@ export default function RootLayout({
       <body className="bg-birch-skin text-charcoal antialiased">
         <ErrorBoundary>
           <AppStoreProvider>
-            <div className="mx-auto min-h-dvh w-full max-w-md bg-birch-skin">
+            <div className="mx-auto min-h-dvh w-full max-w-md bg-birch-skin" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
               {children}
             </div>
           </AppStoreProvider>
