@@ -13,7 +13,7 @@ import type { Account, GoalAccount } from './types';
 import { INITIAL_ACCOUNTS, INITIAL_GOALS } from './mockData';
 
 // Bump this string whenever INITIAL_GOALS changes — forces a reset in all browsers.
-const DATA_VERSION = 'v10';
+const DATA_VERSION = 'v11';
 // Bump whenever INITIAL_ACCOUNTS balances change — forces account cache reset.
 const ACCOUNTS_VERSION = 'v2';
 

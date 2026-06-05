@@ -18,6 +18,7 @@ export const INITIAL_ACCOUNTS: Account[] = [
 ];
 
 export const INITIAL_GOALS: GoalAccount[] = [
+  // ── Savings goals ────────────────────────────────────────────────────────────
   {
     id: 'goal-demo-solar',
     name: 'Solar panels',
@@ -53,6 +54,31 @@ export const INITIAL_GOALS: GoalAccount[] = [
     transition: 'resources',
     goalType: 'saving',
     timeHorizonMonths: 12,
+  },
+  // ── Investment goals ─────────────────────────────────────────────────────────
+  {
+    id: 'goal-demo-retirement',
+    name: 'Retirement fund',
+    iconKey: 'safety',
+    targetAmount: 150000,
+    balance: 12500,
+    parentAccountId: 'savings-1',
+    purpose: 'Financial independence by 65',
+    transition: 'society',
+    goalType: 'investing',
+    timeHorizonMonths: 240,
+  },
+  {
+    id: 'goal-demo-education',
+    name: "Children's education",
+    iconKey: 'education',
+    targetAmount: 50000,
+    balance: 8000,
+    parentAccountId: 'savings-1',
+    purpose: 'Give our kids the best possible start',
+    transition: 'wellbeing',
+    goalType: 'investing',
+    timeHorizonMonths: 180,
   },
 ];
 
