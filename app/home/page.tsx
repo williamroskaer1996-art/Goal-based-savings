@@ -92,28 +92,36 @@ export default function HomePage() {
 
       {/* Goals CTA — Set goals / See goals */}
       {(() => {
-        const activeGoals = goals.filter((g) => !g.completedAt);
-        const hasGoals = goals.length > 0;
-        const hasActive = activeGoals.length > 0;
-        const goalsLabel = hasGoals ? 'See goals' : 'Set goals';
+        const activeGoals  = goals.filter((g) => !g.completedAt);
+        const hasGoals     = goals.length > 0;
+        const hasActive    = activeGoals.length > 0;
+        const goalsLabel   = hasGoals ? 'See goals' : 'Set goals';
+        const totalSaved   = goals.reduce((sum, g) => sum + (g.balance ?? 0), 0);
         const goalsSubtitle = hasActive
           ? `${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''}`
           : hasGoals ? 'View your completed goals'
           : 'Define your savings goals';
-        const goalsHref = '/goals';
         return (
           <button
             type="button"
-            onClick={() => router.push(goalsHref)}
-            className="mt-6 flex w-full items-center justify-between gap-3 rounded-2xl border border-grounded-lupine/30 bg-grounded-lupine/15 px-5 py-4 text-left transition active:scale-[0.99] hover:bg-grounded-lupine/20"
+            onClick={() => router.push('/goals')}
+            className="mt-6 w-full rounded-2xl border border-grounded-lupine/30 bg-grounded-lupine/15 px-5 py-4 text-left transition active:scale-[0.99] hover:bg-grounded-lupine/20"
           >
-            <div>
+            {/* Top row: label + arrow */}
+            <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-grounded-lupine">{goalsLabel}</p>
-              <p className="text-xs text-grounded-lupine/60">{goalsSubtitle}</p>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0 text-grounded-lupine">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0 text-grounded-lupine">
-              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            {/* Bottom row: total saved */}
+            <div className="mt-1">
+              <p className="text-xs text-grounded-lupine/60">
+                {hasGoals
+                  ? <>Total saved: <span className="text-grounded-lupine">€ {totalSaved.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span></>
+                  : 'Define your savings goals'}
+              </p>
+            </div>
           </button>
         );
       })()}
