@@ -13,7 +13,20 @@ import type { Account, GoalAccount } from './types';
 import { INITIAL_ACCOUNTS, INITIAL_GOALS } from './mockData';
 
 // Bump this string whenever INITIAL_GOALS changes — forces a reset in all browsers.
-const DATA_VERSION = 'v9';
+const DATA_VERSION = 'v10';
+// Bump whenever INITIAL_ACCOUNTS balances change — forces account cache reset.
+const ACCOUNTS_VERSION = 'v2';
+
+// Goals are stored in localStorage so they survive closing the app.
+// Auth stays in sessionStorage so it resets on each visit (correct behaviour).
+const goalStorage = {
+  get: (key: string) => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set: (key: string, value: string) => {
+    try { localStorage.setItem(key, value); } catch { /* ignore */ }
+  },
+};
 
 type AppStoreValue = {
   isInitialized: boolean;
@@ -37,32 +50,38 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
   const [goals, setGoals] = useState<GoalAccount[]>([]);
 
-  // Rehydrate from sessionStorage after mount (avoids SSR mismatch)
+  // Rehydrate after mount (avoids SSR mismatch)
   useEffect(() => {
+    // Auth — sessionStorage (resets when app closes)
     if (sessionStorage.getItem('triodos_auth') === '1') {
       setIsAuthenticated(true);
     }
     try {
+      // Accounts — sessionStorage (mock data, fine to reset)
       const savedAccounts = sessionStorage.getItem('triodos_accounts');
-      if (savedAccounts) {
-        // Always use INITIAL_ACCOUNTS as source of truth for static fields
-        // (name, IBAN, type) — only restore the mutable balance from cache.
+      const savedAccountsVersion = sessionStorage.getItem('triodos_accounts_version');
+      if (savedAccounts && savedAccountsVersion === ACCOUNTS_VERSION) {
         const parsed = JSON.parse(savedAccounts) as Account[];
         const merged = INITIAL_ACCOUNTS.map(init => {
           const saved = parsed.find(a => a.id === init.id);
           return saved ? { ...init, balance: saved.balance } : init;
         });
         setAccounts(merged);
+      } else {
+        sessionStorage.setItem('triodos_accounts', JSON.stringify(INITIAL_ACCOUNTS));
+        sessionStorage.setItem('triodos_accounts_version', ACCOUNTS_VERSION);
       }
-      const savedGoals = sessionStorage.getItem('triodos_goals');
-      const savedVersion = sessionStorage.getItem('triodos_data_version');
+
+      // Goals — localStorage (persists across sessions)
+      const savedGoals   = goalStorage.get('triodos_goals');
+      const savedVersion = goalStorage.get('triodos_data_version');
       if (savedGoals && savedVersion === DATA_VERSION) {
         setGoals(JSON.parse(savedGoals) as GoalAccount[]);
       } else {
-        // First load or stale data — seed with current defaults
+        // First load or stale version — seed with demo defaults
         setGoals(INITIAL_GOALS);
-        sessionStorage.setItem('triodos_goals', JSON.stringify(INITIAL_GOALS));
-        sessionStorage.setItem('triodos_data_version', DATA_VERSION);
+        goalStorage.set('triodos_goals', JSON.stringify(INITIAL_GOALS));
+        goalStorage.set('triodos_data_version', DATA_VERSION);
       }
     } catch (e) {
       console.error('Failed to rehydrate store:', e);
@@ -81,13 +100,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addGoal = useCallback((goal: Omit<GoalAccount, 'id'>) => {
-    const newGoal: GoalAccount = {
-      ...goal,
-      id: `goal-${Date.now()}`,
-    };
+    const newGoal: GoalAccount = { ...goal, id: `goal-${Date.now()}` };
     setGoals((prev) => {
       const next = [...prev, newGoal];
-      sessionStorage.setItem('triodos_goals', JSON.stringify(next));
+      goalStorage.set('triodos_goals', JSON.stringify(next));
       return next;
     });
   }, []);
@@ -95,7 +111,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const updateGoal = useCallback((goalId: string, patch: Partial<Omit<GoalAccount, 'id'>>) => {
     setGoals((prev) => {
       const next = prev.map((g) => g.id === goalId ? { ...g, ...patch } : g);
-      sessionStorage.setItem('triodos_goals', JSON.stringify(next));
+      goalStorage.set('triodos_goals', JSON.stringify(next));
       return next;
     });
   }, []);
@@ -105,7 +121,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       const next = prev.map((g) =>
         g.id === goalId ? { ...g, balance: g.balance + amount } : g,
       );
-      sessionStorage.setItem('triodos_goals', JSON.stringify(next));
+      goalStorage.set('triodos_goals', JSON.stringify(next));
       return next;
     });
   }, []);
@@ -117,7 +133,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           ? { ...g, completedAt: new Date().toISOString() }
           : g,
       );
-      sessionStorage.setItem('triodos_goals', JSON.stringify(next));
+      goalStorage.set('triodos_goals', JSON.stringify(next));
       return next;
     });
   }, []);
@@ -128,6 +144,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         a.id === accountId ? { ...a, balance: a.balance + amount } : a,
       );
       sessionStorage.setItem('triodos_accounts', JSON.stringify(next));
+      sessionStorage.setItem('triodos_accounts_version', ACCOUNTS_VERSION);
       return next;
     });
   }, []);

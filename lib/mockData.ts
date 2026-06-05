@@ -5,7 +5,7 @@ export const INITIAL_ACCOUNTS: Account[] = [
     id: 'savings-1',
     ownerName: 'William Roskær',
     iban: 'NL20 TRIO 2301 2295 21',
-    balance: 8200,
+    balance: 54000,
     type: 'savings',
   },
   {
@@ -17,7 +17,44 @@ export const INITIAL_ACCOUNTS: Account[] = [
   },
 ];
 
-export const INITIAL_GOALS: GoalAccount[] = [];
+export const INITIAL_GOALS: GoalAccount[] = [
+  {
+    id: 'goal-demo-solar',
+    name: 'Solar panels',
+    iconKey: 'home',
+    targetAmount: 8000,
+    balance: 3200,
+    parentAccountId: 'savings-1',
+    purpose: 'Become energy independent at home',
+    transition: 'energy',
+    goalType: 'saving',
+    timeHorizonMonths: 36,
+  },
+  {
+    id: 'goal-demo-japan',
+    name: 'Japan trip',
+    iconKey: 'holiday',
+    targetAmount: 4500,
+    balance: 1800,
+    parentAccountId: 'savings-1',
+    purpose: 'Family holiday in Japan 2026',
+    transition: 'wellbeing',
+    goalType: 'saving',
+    timeHorizonMonths: 24,
+  },
+  {
+    id: 'goal-demo-bike',
+    name: 'Electric cargo bike',
+    iconKey: 'bike',
+    targetAmount: 2800,
+    balance: 950,
+    parentAccountId: 'savings-1',
+    purpose: 'Replace the car for school runs and groceries',
+    transition: 'resources',
+    goalType: 'saving',
+    timeHorizonMonths: 12,
+  },
+];
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
   { id: 't1',  label: 'Albert Heijn',       sublabel: 'Groceries',         amount: -43.80,  date: 'Today',     type: 'debit',  icon: '🛒' },
