@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SplashPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [canAutoplay, setCanAutoplay] = useState(true);
 
   const goToLogin = () => {
     router.replace('/login');
@@ -15,29 +16,38 @@ export default function SplashPage() {
     const video = videoRef.current;
     if (!video) return;
 
-    // When the video ends, navigate to login
     video.addEventListener('ended', goToLogin);
 
-    // Fallback: if video fails to load/play, go to login after 3s
-    const fallback = setTimeout(goToLogin, 8000);
-
+    // Try autoplay (works on desktop and iOS when muted+playsInline)
     video.play().catch(() => {
-      // Autoplay blocked (e.g. first load without user gesture) — go straight to login
-      clearTimeout(fallback);
-      goToLogin();
+      // Autoplay blocked — stay on splash, show tap-to-continue UI
+      setCanAutoplay(false);
     });
 
     return () => {
       video.removeEventListener('ended', goToLogin);
-      clearTimeout(fallback);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleTap = () => {
+    const video = videoRef.current;
+    if (!video) { goToLogin(); return; }
+
+    if (!canAutoplay) {
+      // First tap: start playing
+      setCanAutoplay(true);
+      video.play().catch(goToLogin);
+    } else {
+      // Tap while playing: skip to login
+      goToLogin();
+    }
+  };
+
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center cursor-pointer"
       style={{ backgroundColor: '#F3EDE4' }}
-      onClick={goToLogin}
+      onClick={handleTap}
     >
       <video
         ref={videoRef}
@@ -48,6 +58,15 @@ export default function SplashPage() {
         className="h-full w-full object-contain"
         style={{ maxWidth: '100vw', maxHeight: '100vh' }}
       />
+
+      {/* Shown only when autoplay is blocked — prompts user to tap */}
+      {!canAutoplay && (
+        <div className="absolute bottom-16 left-0 right-0 flex justify-center pointer-events-none">
+          <p style={{ color: '#004B32' }} className="text-sm opacity-50 tracking-wide">
+            Tap to continue
+          </p>
+        </div>
+      )}
     </div>
   );
 }
