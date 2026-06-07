@@ -1,72 +1,46 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export default function SplashPage() {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [canAutoplay, setCanAutoplay] = useState(true);
 
-  const goToLogin = () => {
-    router.replace('/login');
-  };
+  const goToLogin = () => router.replace('/login');
 
+  // Fallback: if video never fires 'ended' within 10s, go to login
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.addEventListener('ended', goToLogin);
-
-    // Try autoplay (works on desktop and iOS when muted+playsInline)
-    video.play().catch(() => {
-      // Autoplay blocked — stay on splash, show tap-to-continue UI
-      setCanAutoplay(false);
-    });
-
-    return () => {
-      video.removeEventListener('ended', goToLogin);
-    };
+    const t = setTimeout(goToLogin, 10_000);
+    return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleTap = () => {
-    const video = videoRef.current;
-    if (!video) { goToLogin(); return; }
-
-    if (!canAutoplay) {
-      // First tap: start playing
-      setCanAutoplay(true);
-      video.play().catch(goToLogin);
-    } else {
-      // Tap while playing: skip to login
-      goToLogin();
-    }
-  };
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center cursor-pointer"
-      style={{ backgroundColor: '#F3EDE4' }}
-      onClick={handleTap}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#F3EDE4',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+      }}
+      onClick={goToLogin}
     >
+      {/* autoPlay + muted + playsInline = iOS-safe autoplay */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
-        ref={videoRef}
-        src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/logo-animation.mp4`}
+        src={`${BASE}/logo-animation.mp4`}
+        autoPlay
         muted
         playsInline
         preload="auto"
-        className="h-full w-full object-contain"
-        style={{ maxWidth: '100vw', maxHeight: '100vh' }}
+        onEnded={goToLogin}
+        onError={goToLogin}
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
       />
-
-      {/* Shown only when autoplay is blocked — prompts user to tap */}
-      {!canAutoplay && (
-        <div className="absolute bottom-16 left-0 right-0 flex justify-center pointer-events-none">
-          <p style={{ color: '#004B32' }} className="text-sm opacity-50 tracking-wide">
-            Tap to continue
-          </p>
-        </div>
-      )}
     </div>
   );
 }
