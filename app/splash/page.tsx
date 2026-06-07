@@ -1,28 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export default function SplashPage() {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-
   const goToLogin = () => router.replace('/login');
 
+  // Fallback: if the video never fires onEnded (e.g. blocked), go after 12s
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    // Ensure it plays even if the HTML autoPlay attribute was suppressed
-    video.play().catch(() => {
-      // Still blocked — go straight to login rather than show a broken screen
-      goToLogin();
-    });
-
-    // Hard fallback in case onEnded never fires
-    const t = setTimeout(goToLogin, 15_000);
+    const t = setTimeout(goToLogin, 12_000);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -42,17 +31,15 @@ export default function SplashPage() {
         cursor: 'pointer',
       }}
     >
-      {/* autoPlay + muted + playsInline = iOS-safe autoplay, no user gesture needed */}
+      {/* autoPlay + muted + playsInline = the exact combo iOS Safari allows without user gesture */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
-        ref={videoRef}
         src={`${BASE}/logo-animation.mp4`}
         autoPlay
         muted
         playsInline
         preload="auto"
         onEnded={goToLogin}
-        onError={goToLogin}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </div>
