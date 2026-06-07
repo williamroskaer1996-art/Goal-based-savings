@@ -1,52 +1,36 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export default function SplashPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [started, setStarted] = useState(false);
 
   const goToLogin = () => router.replace('/login');
 
-  // Try autoplay immediately on mount
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    video.play()
-      .then(() => setStarted(true))
-      .catch(() => {
-        // Autoplay blocked — wait for user tap (handled by onClick below)
-        setStarted(false);
-      });
+    // Ensure it plays even if the HTML autoPlay attribute was suppressed
+    video.play().catch(() => {
+      // Still blocked — go straight to login rather than show a broken screen
+      goToLogin();
+    });
 
-    // Hard fallback: go to login after 15s no matter what
+    // Hard fallback in case onEnded never fires
     const t = setTimeout(goToLogin, 15_000);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleTap = () => {
-    const video = videoRef.current;
-    if (!video) { goToLogin(); return; }
-
-    if (!started) {
-      // First tap: start the video
-      video.play()
-        .then(() => setStarted(true))
-        .catch(goToLogin);
-    } else {
-      // Tap while playing: skip to login
-      goToLogin();
-    }
-  };
-
   return (
+    // Tap anywhere to skip
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
-      onClick={handleTap}
+      onClick={goToLogin}
       style={{
         position: 'fixed',
         inset: 0,
@@ -58,10 +42,12 @@ export default function SplashPage() {
         cursor: 'pointer',
       }}
     >
+      {/* autoPlay + muted + playsInline = iOS-safe autoplay, no user gesture needed */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoRef}
         src={`${BASE}/logo-animation.mp4`}
+        autoPlay
         muted
         playsInline
         preload="auto"
@@ -69,22 +55,6 @@ export default function SplashPage() {
         onError={goToLogin}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
       />
-
-      {/* Prompt shown when autoplay is blocked */}
-      {!started && (
-        <div style={{
-          position: 'absolute',
-          bottom: 64,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          pointerEvents: 'none',
-        }}>
-          <p style={{ color: '#004B32', fontSize: 13, opacity: 0.45, letterSpacing: '0.08em' }}>
-            TAP TO CONTINUE
-          </p>
-        </div>
-      )}
     </div>
   );
 }
