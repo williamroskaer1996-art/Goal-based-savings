@@ -533,6 +533,19 @@ function SetGoalContent() {
               </button>
             )}
           </div>
+
+          {/* See all funds link */}
+          <p className="mt-3 text-center text-xs text-charcoal/40">
+            Not the right fit?{' '}
+            <button
+              type="button"
+              onClick={() => router.push('/invest/funds')}
+              className="font-medium underline underline-offset-2 transition hover:text-charcoal/70"
+              style={{ color: '#8074FF' }}
+            >
+              See all funds
+            </button>
+          </p>
         </div>
 
       </div>

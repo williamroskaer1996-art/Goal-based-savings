@@ -1,168 +1,148 @@
-import { chromium } from 'playwright';
-import { mkdir } from 'fs/promises';
-import path from 'path';
+/**
+ * Triodos Goal Advisor — Screen capture (Puppeteer)
+ * Saves every app screen as JPEG to public/screens/
+ * Run: node scripts/capture-screens.mjs
+ */
+import puppeteer from '/Users/williamroskaer/Desktop/triodos-goal-advisor/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
+import { writeFileSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const BASE = 'http://localhost:3001';
-const OUT  = path.resolve('./scripts/screens');
+const __dir  = dirname(fileURLToPath(import.meta.url));
+const OUT    = join(__dir, '..', 'public', 'screens');
+mkdirSync(OUT, { recursive: true });
+
+const BASE = 'http://127.0.0.1:3001';
 const W = 390, H = 844;
 
-const GOALS = [
-  { id:'goal-1', name:'Solar panels',   iconKey:'home',    transition:'energy',    partnershipId:'solarnl', balance:1000, targetAmount:8000,  parentAccountId:'savings-1', purpose:'Become energy independent at home' },
-  { id:'goal-2', name:'Gazelle e-bike', iconKey:'bike',    transition:'resources', partnershipId:'gazelle', balance:500,  targetAmount:2500,  parentAccountId:'savings-1', purpose:'Get around sustainably without a car' },
-  { id:'goal-3', name:'Veggie garden',  iconKey:'garden',  transition:'food',      balance:300,  targetAmount:600,   parentAccountId:'savings-1', purpose:'Grow my own vegetables' },
-  { id:'goal-4', name:'Emergency fund', iconKey:'safety',  transition:'society',   balance:800,  targetAmount:2000,  parentAccountId:'savings-1', purpose:'Build financial resilience' },
-  { id:'goal-5', name:'Yoga retreat',   iconKey:'health',  transition:'wellbeing', balance:200,  targetAmount:800,   parentAccountId:'savings-1', purpose:'Rest and recharge' },
-];
+// Goals stored as a plain JSON array; version tracked separately
+const SAMPLE_GOALS_ARRAY = JSON.stringify([
+  { id:'g1', name:'Solar panels',  iconKey:'home',   targetAmount:5000, balance:1800,
+    parentAccountId:'savings-1', goalType:'saving',   transition:'energy',    timeHorizonMonths:24 },
+  { id:'g2', name:'Veggie garden', iconKey:'garden', targetAmount:800,  balance:320,
+    parentAccountId:'savings-1', goalType:'saving',   transition:'food',      timeHorizonMonths:12 },
+  { id:'g3', name:'E-bike',        iconKey:'bike',   targetAmount:2500, balance:500,
+    parentAccountId:'savings-1', goalType:'saving',   transition:'resources', timeHorizonMonths:18 },
+]);
 
-// Same goals but with Solar panels completed (for voucher screenshot)
-const GOALS_COMPLETED = GOALS.map(g =>
-  g.id === 'goal-1'
-    ? { ...g, balance: 8000, completedAt: '2026-04-01T10:00:00.000Z' }
-    : g
-);
+const browser = await puppeteer.launch({
+  headless: true,
+  args: ['--no-sandbox','--disable-setuid-sandbox','--disable-web-security'],
+});
+const page = await browser.newPage();
+await page.setViewport({ width: W, height: H, deviceScaleFactor: 2 });
 
-async function seed(page, goals = GOALS) {
-  await page.evaluate((g) => {
+// Navigate to /login first to establish the origin (and let React clear auth),
+// then immediately re-set auth+goals via evaluate before any protected page sees them.
+await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0' });
+await sleep(800); // let the login useEffect run (it removes triodos_auth)
+
+async function seedAndGo(url) {
+  // Set correct keys: auth='1', goals=plain array, version='v6'
+  await page.evaluate((goalsJson) => {
     sessionStorage.setItem('triodos_auth', '1');
-    sessionStorage.setItem('triodos_goals', JSON.stringify(g));
-    sessionStorage.setItem('triodos_data_version', 'v4');
-  }, goals);
+    sessionStorage.setItem('triodos_goals', goalsJson);
+    sessionStorage.setItem('triodos_data_version', 'v6');
+  }, SAMPLE_GOALS_ARRAY);
+  await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle0', timeout: 20000 });
+  await sleep(600);
 }
 
-async function go(page, url) {
-  await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function save(name) {
+  const buf = await page.screenshot({ type: 'jpeg', quality: 93 });
+  writeFileSync(join(OUT, `${name}.jpg`), buf);
+  console.log(`✓  ${name}.jpg`);
+  return buf;
 }
 
-async function shot(page, name) {
-  const file = path.join(OUT, `${name}.png`);
-  await page.screenshot({ path: file });
-  console.log(`✓ ${name}`);
-  return file;
+// ── 01 Login — idle ────────────────────────────────────────────────────────────
+await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0' });
+await sleep(500);
+await save('01-login');
+
+// ── 02 Login — PIN pad visible ─────────────────────────────────────────────────
+await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0' });
+await sleep(400);
+const allBtns = await page.$$('button');
+for (const btn of allBtns) {
+  const t = await page.evaluate(el => el.textContent.trim(), btn);
+  if (t === 'Use PIN instead') { await btn.click(); break; }
 }
+await sleep(500);
+await save('02-login-pin');
 
-(async () => {
-  await mkdir(OUT, { recursive: true });
-  const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: W, height: H } });
-  const page = await ctx.newPage();
+// ── 03 Home ─────────────────────────────────────────────────────────────────────
+await seedAndGo('/home');
+await save('03-home');
 
-  // ── 01 Login (no auth needed — but navigating here clears auth) ─────────
-  await go(page, '/login');
-  await shot(page, '01-login');
-  // Re-seed auth AFTER login screenshot (login page clears triodos_auth on mount)
-  await seed(page);
+// ── 04 Account detail — savings ────────────────────────────────────────────────
+await seedAndGo('/accounts/savings-1');
+await save('04-account-detail');
 
-  // ── 02 Home ─────────────────────────────────────────────────────────────
-  await go(page, '/home');
-  await shot(page, '02-home');
+// ── 05 Account detail — checking ───────────────────────────────────────────────
+await seedAndGo('/accounts/checking-1');
+await save('05-account-detail-checking');
 
-  // ── 03 Account detail ───────────────────────────────────────────────────
-  await go(page, '/accounts/savings-1');
-  await shot(page, '03-account-detail');
+// ── 06 Goals list ───────────────────────────────────────────────────────────────
+await seedAndGo('/goals');
+await sleep(800); // let blobs/cards render
+await save('06-goals');
 
-  // ── 04 Goals bubble view ─────────────────────────────────────────────────
-  await go(page, '/goals');
-  await page.waitForTimeout(800); // let blobs settle
-  await shot(page, '04-goals');
+// ── 07 Goal form — empty ────────────────────────────────────────────────────────
+await seedAndGo('/accounts/savings-1/goal');
+await save('07-goal-form-empty');
 
-  // Helper: find blob centre by innerText, dispatch pointer events to open sheet
-  async function tapBlob(text) {
+// ── 08 Goal form — name filled + transition chip ────────────────────────────────
+await seedAndGo('/accounts/savings-1/goal');
+const nameInput = await page.$('input[placeholder="E.g. Solar panels"]');
+if (nameInput) {
+  await nameInput.click({ clickCount: 3 });
+  await nameInput.type('Solar panels', { delay: 25 });
+}
+await sleep(600);
+await save('08-goal-form-filled');
 
-    const coords = await page.evaluate((txt) => {
-      const el = [...document.querySelectorAll('div')].find(
-        e => window.getComputedStyle(e).position === 'absolute' && e.innerText?.includes(txt)
-      );
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    }, text);
+// ── 09 Goal form — Investment + fund recommendation ─────────────────────────────
+await seedAndGo('/accounts/savings-1/goal');
+const nameInput2 = await page.$('input[placeholder="E.g. Solar panels"]');
+if (nameInput2) {
+  await nameInput2.click({ clickCount: 3 });
+  await nameInput2.type('Solar panels', { delay: 25 });
+}
+// Slide to 10 years
+await page.evaluate(() => {
+  const s = document.querySelector('input[type="range"]');
+  if (!s) return;
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(s, '10');
+  s.dispatchEvent(new Event('input', { bubbles: true }));
+});
+// Click Investment tab
+const btns2 = await page.$$('button');
+for (const btn of btns2) {
+  const t = await page.evaluate(el => el.textContent.trim(), btn);
+  if (t === 'Investment') { await btn.click(); break; }
+}
+await sleep(2800); // wait for AI / keyword fund recommendation
+await save('09-goal-form-investment');
 
-    if (!coords) { console.warn(`  ! Could not find blob: ${text}`); return; }
+// ── 10 Goal form — Transition modal open ────────────────────────────────────────
+await seedAndGo('/accounts/savings-1/goal');
+const nameInput3 = await page.$('input[placeholder="E.g. Solar panels"]');
+if (nameInput3) {
+  await nameInput3.click({ clickCount: 3 });
+  await nameInput3.type('Solar panels', { delay: 25 });
+}
+await sleep(600);
+const chipBtns = await page.$$('button');
+for (const btn of chipBtns) {
+  const t = await page.evaluate(el => el.textContent, btn);
+  if (t && t.includes('transition')) { await btn.click(); break; }
+}
+await sleep(500);
+await save('10-goal-form-modal');
 
-    // Dispatch pointer events that React will pick up
-    await page.evaluate(({ x, y }) => {
-      const el = document.elementFromPoint(x, y);
-      if (!el) return;
-      const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, isPrimary: true };
-      el.dispatchEvent(new PointerEvent('pointerdown', opts));
-      el.dispatchEvent(new PointerEvent('pointerup',   opts));
-    }, coords);
-    await page.waitForTimeout(700);
-  }
+await browser.close();
 
-  // ── 05 Goal detail sheet — Solar panels (active + partnership) ───────────
-  await go(page, '/goals');
-  await page.waitForTimeout(1000);
-  await tapBlob('Solar panels');
-  await shot(page, '05-goal-detail-solar-panels');
-
-  // ── 06 Goal detail sheet — Veggie garden (active, no partnership) ────────
-  await go(page, '/goals');
-  await page.waitForTimeout(1000);
-  await tapBlob('Veggie garden');
-  await shot(page, '06-goal-detail-veggie-garden');
-
-  // ── 07 Goal detail sheet — Solar panels COMPLETED + voucher ─────────────
-  await seed(page, GOALS_COMPLETED);
-  await go(page, '/goals');
-  await page.waitForTimeout(1000);
-  await tapBlob('Solar panels');
-  await shot(page, '07-goal-detail-voucher-solar');
-
-  // ── 08 Set goal form — empty ─────────────────────────────────────────────
-  await seed(page);
-  await go(page, '/accounts/savings-1/goal');
-  await shot(page, '08-set-goal-empty');
-
-  // ── 09 Set goal form — with partnership pre-selected ────────────────────
-  await go(page, `/accounts/savings-1/goal?partnershipId=solarnl`);
-  await page.waitForTimeout(400);
-  await shot(page, '09-set-goal-with-partnership');
-
-  // ── 10 Partnerships list ─────────────────────────────────────────────────
-  await go(page, '/partnerships');
-  await shot(page, '10-partnerships');
-
-  // ── Wrapped slides ───────────────────────────────────────────────────────
-  await seed(page);
-  await go(page, '/wrapped');
-  await page.waitForTimeout(800);
-  await shot(page, '11-wrapped-welcome');
-
-  // Click right side of screen to advance through slides
-  async function nextSlide() {
-    await page.mouse.click(W * 0.75, H * 0.5);
-    await page.waitForTimeout(500);
-  }
-
-  await nextSlide();
-  await shot(page, '12-wrapped-goals-count');
-
-  await nextSlide();
-  await shot(page, '13-wrapped-saved');
-
-  await nextSlide();
-  await shot(page, '14-wrapped-transition-energy');
-
-  await nextSlide();
-  await shot(page, '15-wrapped-transition-resources');
-
-  await nextSlide();
-  await shot(page, '16-wrapped-transition-food');
-
-  await nextSlide();
-  await shot(page, '17-wrapped-transition-society');
-
-  await nextSlide();
-  await shot(page, '18-wrapped-transition-wellbeing');
-
-  await nextSlide();
-  await shot(page, '19-wrapped-partnerships');
-
-  await nextSlide();
-  await shot(page, '20-wrapped-outro');
-
-  await browser.close();
-  console.log('\nAll screens captured!');
-})();
+console.log(`\n✅  All 10 screens saved to public/screens/`);

@@ -65,6 +65,53 @@ function fmt(n: number): string {
   }).format(n);
 }
 
+// ── Impact allocation per fund focus ─────────────────────────────────────────
+// Each entry: [Energy, Food, Resources, Society, Wellbeing] — must sum to 100
+const IMPACT_SPLITS: Record<string, { label: string; color: string; pct: number }[]> = {
+  Energy: [
+    { label: 'Energy',    color: '#004B32', pct: 75 },
+    { label: 'Resources', color: '#FF6400', pct: 14 },
+    { label: 'Society',   color: '#8074FF', pct:  6 },
+    { label: 'Food',      color: '#98D39A', pct:  3 },
+    { label: 'Wellbeing', color: '#C2CBFA', pct:  2 },
+  ],
+  Food: [
+    { label: 'Food',      color: '#98D39A', pct: 70 },
+    { label: 'Resources', color: '#FF6400', pct: 14 },
+    { label: 'Society',   color: '#8074FF', pct: 10 },
+    { label: 'Energy',    color: '#004B32', pct:  4 },
+    { label: 'Wellbeing', color: '#C2CBFA', pct:  2 },
+  ],
+  Resources: [
+    { label: 'Resources', color: '#FF6400', pct: 58 },
+    { label: 'Energy',    color: '#004B32', pct: 20 },
+    { label: 'Society',   color: '#8074FF', pct: 12 },
+    { label: 'Food',      color: '#98D39A', pct:  7 },
+    { label: 'Wellbeing', color: '#C2CBFA', pct:  3 },
+  ],
+  Society: [
+    { label: 'Society',   color: '#8074FF', pct: 58 },
+    { label: 'Wellbeing', color: '#C2CBFA', pct: 20 },
+    { label: 'Food',      color: '#98D39A', pct: 12 },
+    { label: 'Resources', color: '#FF6400', pct:  7 },
+    { label: 'Energy',    color: '#004B32', pct:  3 },
+  ],
+  Wellbeing: [
+    { label: 'Wellbeing', color: '#C2CBFA', pct: 48 },
+    { label: 'Society',   color: '#8074FF', pct: 30 },
+    { label: 'Food',      color: '#98D39A', pct: 12 },
+    { label: 'Resources', color: '#FF6400', pct:  6 },
+    { label: 'Energy',    color: '#004B32', pct:  4 },
+  ],
+  Mixed: [
+    { label: 'Energy',    color: '#004B32', pct: 24 },
+    { label: 'Society',   color: '#8074FF', pct: 22 },
+    { label: 'Resources', color: '#FF6400', pct: 20 },
+    { label: 'Food',      color: '#98D39A', pct: 18 },
+    { label: 'Wellbeing', color: '#C2CBFA', pct: 16 },
+  ],
+};
+
 // ── Bar chart — birch-skin canvas, lupine bars ────────────────────────────────
 function GrowthChart({
   data,
@@ -259,6 +306,43 @@ function FundProjectionContent() {
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-sm" style={{ background: LUPINE }} />
               <span className="text-[10px] text-charcoal/35">Returns</span>
+            </div>
+          </div>
+
+          {/* ── Where your money works ── */}
+          <div className="mt-5 border-t border-charcoal/8 pt-4">
+            <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-charcoal/35">
+              Where your money works
+            </p>
+
+            {/* Stacked bar */}
+            <div className="flex h-3 w-full overflow-hidden rounded-full">
+              {(IMPACT_SPLITS[fund.focus] ?? IMPACT_SPLITS['Mixed']).map((seg, i) => (
+                <div
+                  key={seg.label}
+                  style={{
+                    width: `${seg.pct}%`,
+                    background: seg.color,
+                    opacity: seg.label === 'Wellbeing' ? 0.55 : 1,
+                    marginLeft: i === 0 ? 0 : '1.5px',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Dot legend */}
+            <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1.5">
+              {(IMPACT_SPLITS[fund.focus] ?? IMPACT_SPLITS['Mixed']).map((seg) => (
+                <div key={seg.label} className="flex items-center gap-1">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: seg.color, opacity: seg.label === 'Wellbeing' ? 0.55 : 1 }}
+                  />
+                  <span className="text-[10px] text-charcoal/45">
+                    {seg.label} <span className="text-charcoal/30">{seg.pct}%</span>
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
