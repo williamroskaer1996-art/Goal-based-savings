@@ -41,7 +41,7 @@ export default function SplashPage() {
     >
       <video
         ref={videoRef}
-        src="/logo-animation.mp4"
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/logo-animation.mp4`}
         muted
         playsInline
         preload="auto"
